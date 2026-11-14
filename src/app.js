@@ -672,7 +672,10 @@ $('#ndiAccess').onclick = () => $('#ndiCard').scrollIntoView({ behavior: 'smooth
 $('#outputMode').value = data.outputMode === 'lower-third' ? 'lower-third' : 'full';
 $('#outputMode').onchange = async () => {
   data.outputMode = $('#outputMode').value === 'lower-third' ? 'lower-third' : 'full';
+  if (current()) slideIndex = Math.min(slideIndex, slides(current()).length - 1);
+  if (liveItem) liveIndex = Math.min(liveIndex, slides(liveItem).length - 1);
   save();
+  render();
   await sendDisplays();
 };
 $('#ndiName').value = data.ndi?.name || 'ChurchFlow - Main Output';
