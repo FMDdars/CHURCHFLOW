@@ -290,41 +290,36 @@ async function createOutputCanvas(item, index, blank = false) {
 
   const body = slides(item)[index] || '';
   if (data.outputMode === 'lower-third' && item?.type === 'song') {
-    // Transparent canvas with a translucent, bottom-aligned lyric panel.
-    const panelTop = 790;
-    const panelHeight = 250;
-    ctx.fillStyle = 'rgba(5, 9, 20, 0.78)';
-    ctx.fillRect(0, panelTop, 1920, panelHeight);
-    ctx.fillStyle = '#829bff';
-    ctx.fillRect(0, panelTop, 8, panelHeight);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = '#aebfff';
-    ctx.font = '600 25px Arial';
-    ctx.fillText(String(item?.title || '').slice(0, 90), 100, panelTop + 28);
-    ctx.fillStyle = '#ffffff';
-    const lines = wrapCanvasText(ctx, body, 1720);
-    const visibleLines = lines.slice(0, 2);
-    const fontSize = visibleLines.length >= 2 ? 54 : 62;
-    ctx.font = `600 ${fontSize}px Arial`;
+    // Lyrics-only lower third: the PNG canvas stays fully transparent everywhere
+    // except the centered white lyric text. No title, panel, stripe or decoration.
+    const lines = wrapCanvasText(ctx, body, 1720).filter((line) => line.trim()).slice(0, 2);
+    const fontSize = lines.length >= 2 ? 54 : 62;
     const lineHeight = fontSize * 1.28;
-    let y = panelTop + 78;
-    visibleLines.forEach((line) => { ctx.fillText(line, 100, y); y += lineHeight; });
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `600 ${fontSize}px Arial`;
+    const blockHeight = lines.length * lineHeight;
+    let y = 900 - blockHeight / 2 + lineHeight / 2;
+    lines.forEach((line) => { ctx.fillText(line, 960, y); y += lineHeight; });
     return canvas;
   }
 
-  // Full-screen lyrics/announcement output. No ChurchFlow branding or watermark is drawn.
-  const gradient = ctx.createRadialGradient(1320, 250, 30, 1000, 540, 1250);
-  gradient.addColorStop(0, '#263a65'); gradient.addColorStop(1, '#050914');
-  ctx.fillStyle = gradient; ctx.fillRect(0, 0, 1920, 1080);
-  ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.font = '700 56px Arial';
-  const titleLines = wrapCanvasText(ctx, item?.title || '', 1550);
-  let y = 300; titleLines.slice(0, 2).forEach((line) => { ctx.fillText(line, 960, y); y += 70; });
-  ctx.fillStyle = '#e3eaf8'; ctx.font = '400 62px Arial';
-  const lines = wrapCanvasText(ctx, body, 1560);
+  // Full-screen output: lyrics only for songs; announcement slides retain their text.
+  const isSong = item?.type === 'song';
+  if (!isSong) {
+    const gradient = ctx.createRadialGradient(1320, 250, 30, 1000, 540, 1250);
+    gradient.addColorStop(0, '#263a65'); gradient.addColorStop(1, '#050914');
+    ctx.fillStyle = gradient; ctx.fillRect(0, 0, 1920, 1080);
+  }
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '400 62px Arial';
+  const lines = wrapCanvasText(ctx, body, 1560).filter((line) => line.trim()).slice(0, 4);
   const lineHeight = Math.min(88, 700 / Math.max(1, lines.length));
-  y = Math.max(560, (1080 - lines.length * lineHeight) / 2 + 100);
-  lines.slice(0, 4).forEach((line) => { ctx.fillText(line, 960, y); y += lineHeight; });
+  let y = 540 - (lines.length * lineHeight) / 2 + lineHeight / 2;
+  lines.forEach((line) => { ctx.fillText(line, 960, y); y += lineHeight; });
   return canvas;
 }
 
@@ -591,8 +586,13 @@ $('#search').addEventListener('input', () => {
 
   renderLibrary();
   if (tab !== 'songs' || query.length < 2) return;
-  const hasLocalMatch = data.items.some((item) => item.type === 'song' && searchScore(item, query) > 0);
-  if (hasLocalMatch) return;
+  // Only suppress online lookup when the complete title is already saved.
+  // Fuzzy lyric/body matches must not block a search for an unsaved song title.
+  const normalizedQuery = normalize(query);
+  const exactLocalTitle = data.items.some((item) =>
+    item.type === 'song' && normalize(item.title) === normalizedQuery
+  );
+  if (exactLocalTitle) return;
   onlineSearchTimer = setTimeout(() => {
     if ($('#search').value.trim() !== query || tab !== 'songs') return;
     tab = 'online';
@@ -600,7 +600,7 @@ $('#search').addEventListener('input', () => {
     onlineResults = [];
     renderLibrary();
     searchOnline();
-  }, 650);
+  }, 500);
 });
 $('#search').addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && tab === 'online') {
