@@ -641,9 +641,20 @@ function loadNdiAddon() {
   const addonPath = path.join(addonDirectory, 'churchflow_ndi.node');
   if (!fs.existsSync(addonPath)) return null;
   try {
-    // Windows must be able to resolve the NDI runtime DLL beside the native addon.
+    // Windows must be able to resolve the NDI runtime DLL. NDI installs it
+    // separately from the addon, so include the documented runtime locations.
     if (process.platform === 'win32') {
-      process.env.PATH = `${addonDirectory}${path.delimiter}${process.env.PATH || ''}`;
+      const programFiles = process.env.PROGRAMFILES || 'C:\\Program Files';
+      const ndiRuntimeDirectories = [
+        process.env.NDI_RUNTIME_DIR_V6,
+        process.env.NDI_RUNTIME_DIR_V5,
+        path.join(programFiles, 'NDI', 'NDI 6 Runtime'),
+        path.join(programFiles, 'NDI', 'NDI 5 Runtime'),
+        path.join(process.env.NDI_SDK_DIR || '', 'Bin', 'x64'),
+        path.join(process.env.NDI_SDK_DIR || '', 'Bin'),
+        addonDirectory
+      ].filter((directory) => directory && fs.existsSync(directory));
+      process.env.PATH = `${ndiRuntimeDirectories.join(path.delimiter)}${path.delimiter}${process.env.PATH || ''}`;
     }
     ndiNative = require(addonPath);
     return ndiNative;
