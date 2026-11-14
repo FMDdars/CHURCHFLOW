@@ -58,3 +58,5 @@
 }
 
 .ndi-shortcut{padding:0 14px 12px}.ndi-shortcut .btn{border-color:#526fe5;color:#cbd6ff}.live .control-section{scroll-margin-top:12px}#ndiCard{scroll-margin-top:12px}
+
+#editSelectedSong[hidden],#removeBackground[hidden]{display:none!important}#backgroundVideo{display:none!important}
