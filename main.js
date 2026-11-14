@@ -26,7 +26,8 @@ function publishUpdateState(status, details = {}) {
 }
 
 autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
+// Updates install only after the operator explicitly chooses Restart and install.
+autoUpdater.autoInstallOnAppQuit = false;
 autoUpdater.on('checking-for-update', () => publishUpdateState('checking'));
 autoUpdater.on('update-available', (info) => publishUpdateState('available', { version: info.version, releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : '' }));
 autoUpdater.on('update-not-available', (info) => publishUpdateState('current', { version: info.version }));

@@ -405,16 +405,24 @@ async function importPowerPoint() {
 }
 
 async function updatePresenterView() {
-  const item = current(); if (item?.type !== 'presentation') return;
+  const selectedItem = current();
+  if (selectedItem?.type !== 'presentation') return;
+  // When the selected presentation is already live, Presenter View follows the
+  // exact live snapshot and index instead of the operator's unsent preview.
+  const isLivePresentation = liveItem?.type === 'presentation' && liveItem.id === selectedItem.id;
+  const item = isLivePresentation ? liveItem : selectedItem;
   const pdf = await getPresentationDoc(item);
   const count = pdf.numPages;
-  slideIndex = Math.min(slideIndex, count - 1);
+  const activeIndex = isLivePresentation ? liveIndex : slideIndex;
+  slideIndex = Math.max(0, Math.min(activeIndex, count - 1));
+  if (isLivePresentation) liveIndex = slideIndex;
   const currentCanvas = $('#presenterCurrent'); const nextCanvas = $('#presenterNextCanvas');
   await renderPdfPageToCanvas(item, slideIndex, currentCanvas, currentCanvas.clientWidth || 760, 480);
   const nextIndex = slideIndex + 1;
   if (nextIndex < count) await renderPdfPageToCanvas(item, nextIndex, nextCanvas, nextCanvas.clientWidth || 380, 240);
   else { const ctx = nextCanvas.getContext('2d'); nextCanvas.width = 760; nextCanvas.height = 428; ctx.fillStyle = '#050914'; ctx.fillRect(0, 0, 760, 428); ctx.fillStyle = '#aab5c8'; ctx.font = '24px Arial'; ctx.textAlign = 'center'; ctx.fillText('End of presentation', 380, 218); }
-  $('#presenterStatus').textContent = `Slide ${slideIndex + 1} of ${count} · ${item.originalName || item.title}`;
+  const liveLabel = isLivePresentation ? ' · LIVE OUTPUT' : ' · PREVIEW — NOT LIVE';
+  $('#presenterStatus').textContent = `Slide ${slideIndex + 1} of ${count} · ${item.originalName || item.title}${liveLabel}`;
   $('#presenterNotes').textContent = item.notes?.[String(slideIndex)] || 'No speaker notes were found for this slide.';
 }
 
@@ -552,25 +560,31 @@ async function sendSelectedPresentationLive() {
 }
 
 $('#presenterViewButton').onclick = async () => {
-  if (current()?.type !== 'presentation') return;
+  const item = current();
+  if (item?.type !== 'presentation') return;
+  if (liveItem?.type === 'presentation' && liveItem.id === item.id) slideIndex = liveIndex;
   $('#presenterDialog').showModal();
   try {
+    // Opening Presenter View is read-only: it must never change audience output.
     await updatePresenterView();
-    // Opening Presenter View makes its selected slide the live audience slide.
-    await sendSelectedPresentationLive();
   } catch (error) { $('#presenterStatus').textContent = error.message; }
 };
 $('#closePresenter').onclick = () => $('#presenterDialog').close();
-$('#presenterPrev').onclick = async () => {
-  slideIndex = Math.max(0, slideIndex - 1);
+async function movePresenterSlide(direction) {
+  const item = current();
+  if (item?.type !== 'presentation') return;
+  const isLivePresentation = liveItem?.type === 'presentation' && liveItem.id === item.id;
+  if (isLivePresentation) {
+    liveIndex = Math.max(0, Math.min(slides(liveItem).length - 1, liveIndex + direction));
+    slideIndex = liveIndex;
+  } else {
+    slideIndex = Math.max(0, Math.min(slides(item).length - 1, slideIndex + direction));
+  }
   render();
-  await sendSelectedPresentationLive();
-};
-$('#presenterNext').onclick = async () => {
-  slideIndex = Math.min(slides(current()).length - 1, slideIndex + 1);
-  render();
-  await sendSelectedPresentationLive();
-};
+  if (isLivePresentation) await sendDisplays();
+}
+$('#presenterPrev').onclick = () => movePresenterSlide(-1);
+$('#presenterNext').onclick = () => movePresenterSlide(1);
 $('#presenterGoLive').onclick = sendSelectedPresentationLive;
 
 

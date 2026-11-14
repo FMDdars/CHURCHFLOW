@@ -1,16 +1,32 @@
-# ChurchFlow NDI native bridge
+# ChurchFlow
 
-The C++ addon sends the current ChurchFlow output frame through the official NDI Send API. It is intentionally excluded from a normal ready-to-install release until the SDK and local runtime are configured by the user.
+ChurchFlow is an offline-first Windows worship presentation application. It provides a local song and slide library, service order, audience display windows, PowerPoint/PDF presentation import, Presenter View, clean capture output, and an optional native NDI sender.
 
-## Build prerequisites
+## Build on Windows
 
-- Windows x64.
-- Electron version pinned in the root `package.json` (v0.7.0 uses Electron 45.2.3).
-- Node.js 24 LTS or 26 LTS.
-- Visual Studio Build Tools with MSVC C++ workload.
-- Official NDI SDK and its licence for your intended use.
-- `NDI_SDK_DIR` set to the SDK root containing `Include`, `Lib`, and runtime `Bin` folders.
+- Windows x64
+- Node.js 24.x or 26.x (x64)
+- npm
+- Internet access for dependency and Electron downloads
 
-Run `Build-NDI-Module.bat` from the project root. It calls node-gyp against the Electron headers. Then run `Build-ChurchFlow-Installer.bat` to include the compiled addon and its runtime DLL.
+1. Extract the complete repository.
+2. Run `Build-ChurchFlow-Installer.bat`.
+3. When the build completes, open the `dist` folder and run the ChurchFlow installer.
 
-The addon accepts RGBA pixels from the renderer, converts them to BGRA, stores the newest frame and sends it at 30 or 60 fps. The current implementation supports one NDI video source. It does not send audio, tally or return metadata, and has not yet been validated against the target production hardware.
+The build script runs `npm run check` before creating the installer and portable build. The project check validates required files and JavaScript syntax.
+
+## Presenter View
+
+Presenter View follows the currently live slide when the selected PowerPoint presentation is already on air. Opening Presenter View does not send a preview slide to the audience. Previous/Next navigate the live presentation; **Send selected live** is the explicit action for putting a selected preview on air.
+
+## Updates
+
+Installed builds check GitHub Releases at startup. Operators can also select **Check for updates**. Updates are downloaded only after the operator chooses **Download update**, and installed only after **Restart and install** is selected. A published GitHub Release with the matching version and Windows assets is required.
+
+## Optional NDI output
+
+The C++ NDI addon is optional. Building it requires the official NDI SDK and licence for the intended use, Windows x64, Visual Studio Build Tools with the MSVC C++ workload, and Node.js 24.x–26.x.
+
+Set `NDI_SDK_DIR` to the SDK root, then run `Build-NDI-Module.bat` from the project root. The script builds the addon under `native/ndi`. After a successful build, run `Build-ChurchFlow-Installer.bat` to package it. Clean capture output remains available without the NDI addon.
+
+NDI functionality must be tested on the target Windows system and with the intended receiver before production use.
