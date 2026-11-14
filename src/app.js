@@ -22,9 +22,12 @@ let loadedOnlineHymn = null;
 let pdfjsPromise = null;
 const presentationDocs = new Map();
 let ndiActive = false;
+let backgroundImageCache = null;
+let backgroundVideoReadyUrl = null;
+let backgroundRefreshTimer = null;
 
 function defaultData() {
-  return { items: starter, service: ['s1', 'p1'], outputMode: 'full', ndi: { name: 'ChurchFlow - Main Output', profile: '1080p · 30 fps' } };
+  return { items: starter, service: ['s1', 'p1'], outputMode: 'full', lyricsLinesPerSlide: 4, background: null, ndi: { name: 'ChurchFlow - Main Output', profile: '1080p · 30 fps' } };
 }
 
 function load() {
@@ -44,7 +47,7 @@ function slides(item) {
   if (item?.type === 'presentation') return Array.from({ length: Math.max(1, Number(item.slideCount) || 1) }, (_, index) => `Slide ${index + 1}`);
   if (item?.type === 'song') {
     const lowerThird = data.outputMode === 'lower-third';
-    const maxLines = lowerThird ? 2 : 4;
+    const maxLines = Math.max(1, Math.min(8, Number(data.lyricsLinesPerSlide) || 4));
     const measure = document.createElement('canvas').getContext('2d');
     measure.font = lowerThird ? '600 54px Arial' : '400 62px Arial';
     const maxWidth = lowerThird ? 1720 : 1560;
@@ -108,6 +111,7 @@ function renderLibrary() {
   const online = tab === 'online';
   $('#onlineStatus').hidden = !online;
   $('#onlineSearchButton').hidden = true;
+  $('#editSelectedSong').hidden = current()?.type !== 'song';
   $('#onlineProviderTools').hidden = !online;
   $('#libraryFooter').hidden = online;
   $('#search').placeholder = online ? 'Search online lyrics…' : tab === 'presentations' ? 'Search imported presentations…' : 'Search songs and slides…';
@@ -289,11 +293,31 @@ async function createOutputCanvas(item, index, blank = false) {
   }
 
   const body = slides(item)[index] || '';
+  if (item?.type !== 'presentation' && data.outputMode !== 'lower-third' && data.background?.url) {
+    try {
+      if (data.background.type === 'video') {
+        const video = $('#backgroundVideo');
+        if (video && video.src !== data.background.url) {
+          video.src = data.background.url; video.loop = true; video.muted = true; video.playsInline = true;
+          backgroundVideoReadyUrl = data.background.url;
+          await video.play().catch(() => {});
+        }
+        if (video?.readyState >= 2) ctx.drawImage(video, 0, 0, 1920, 1080);
+      } else {
+        if (!backgroundImageCache || backgroundImageCache.src !== data.background.url) {
+          const image = new Image(); image.src = data.background.url;
+          await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; });
+          backgroundImageCache = image;
+        }
+        ctx.drawImage(backgroundImageCache, 0, 0, 1920, 1080);
+      }
+    } catch (error) { console.warn('Custom background could not be rendered:', error); }
+  }
   if (data.outputMode === 'lower-third' && item?.type === 'song') {
     // Lyrics-only lower third: the PNG canvas stays fully transparent everywhere
     // except the centered white lyric text. No title, panel, stripe or decoration.
-    const lines = wrapCanvasText(ctx, body, 1720).filter((line) => line.trim()).slice(0, 2);
-    const fontSize = lines.length >= 2 ? 54 : 62;
+    const lines = wrapCanvasText(ctx, body, 1720).filter((line) => line.trim()).slice(0, Number(data.lyricsLinesPerSlide) || 4);
+    const fontSize = Math.max(28, Math.min(62, Math.floor(300 / Math.max(1, lines.length) / 1.28)));
     const lineHeight = fontSize * 1.28;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -316,8 +340,8 @@ async function createOutputCanvas(item, index, blank = false) {
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#ffffff';
   ctx.font = '400 62px Arial';
-  const lines = wrapCanvasText(ctx, body, 1560).filter((line) => line.trim()).slice(0, 4);
-  const lineHeight = Math.min(88, 700 / Math.max(1, lines.length));
+  const lines = wrapCanvasText(ctx, body, 1560).filter((line) => line.trim()).slice(0, Number(data.lyricsLinesPerSlide) || 4);
+  const lineHeight = Math.min(88, 760 / Math.max(1, lines.length));
   let y = 540 - (lines.length * lineHeight) / 2 + lineHeight / 2;
   lines.forEach((line) => { ctx.fillText(line, 960, y); y += lineHeight; });
   return canvas;
@@ -621,6 +645,16 @@ document.querySelectorAll('.tab').forEach((button) => {
 });
 
 $('#addSong').onclick = () => addItem('song');
+$('#editSelectedSong').onclick = () => {
+  const item = current();
+  if (!item || item.type !== 'song') return;
+  editingId = item.id;
+  $('#editorTitle').textContent = 'Edit song lyrics';
+  $('#itemTitle').value = item.title || '';
+  $('#itemBody').value = item.body || '';
+  $('#editor').dataset.type = 'song';
+  $('#editor').showModal();
+};
 $('#addSlide').onclick = () => addItem('slide');
 $('#importPowerPoint').onclick = importPowerPoint;
 $('#importPowerPointLibrary').onclick = importPowerPoint;
@@ -670,6 +704,44 @@ $('#openCapture').onclick = openDisplay;
 $('#ndiAccess').onclick = () => $('#ndiCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
 $('#outputMode').value = data.outputMode === 'lower-third' ? 'lower-third' : 'full';
+$('#lyricsLinesPerSlide').value = String(Math.max(1, Math.min(8, Number(data.lyricsLinesPerSlide) || 4)));
+$('#lyricsLinesPerSlide').onchange = async () => {
+  data.lyricsLinesPerSlide = Math.max(1, Math.min(8, Number($('#lyricsLinesPerSlide').value) || 4));
+  if (current()) slideIndex = Math.min(slideIndex, slides(current()).length - 1);
+  if (liveItem) liveIndex = Math.min(liveIndex, slides(liveItem).length - 1);
+  save(); render(); await sendDisplays();
+};
+function refreshBackgroundControls() {
+  const background = data.background;
+  $('#backgroundStatus').textContent = background ? `Selected: ${background.name} · ${background.type}` : 'No custom background selected.';
+  $('#removeBackground').hidden = !background;
+}
+$('#chooseBackground').onclick = async () => {
+  try {
+    const background = await window.churchflowDesktop.importBackground();
+    if (!background) return;
+    data.background = background;
+    backgroundImageCache = null; backgroundVideoReadyUrl = null;
+    const video = $('#backgroundVideo');
+    if (video) { video.pause(); video.removeAttribute('src'); video.load(); }
+    if (background.type === 'video') {
+      video.src = background.url; video.loop = true; video.muted = true; video.playsInline = true;
+      await video.play().catch(() => {});
+      if (backgroundRefreshTimer) clearInterval(backgroundRefreshTimer);
+      backgroundRefreshTimer = setInterval(() => {
+        if (liveItem && !liveBlank && data.background?.type === 'video') sendDisplays().catch(console.warn);
+      }, 1000 / 24);
+    } else if (backgroundRefreshTimer) { clearInterval(backgroundRefreshTimer); backgroundRefreshTimer = null; }
+    save(); refreshBackgroundControls(); render(); await sendDisplays();
+  } catch (error) { alert(error.message || 'Could not import that background.'); }
+};
+$('#removeBackground').onclick = async () => {
+  data.background = null; backgroundImageCache = null; backgroundVideoReadyUrl = null;
+  if (backgroundRefreshTimer) clearInterval(backgroundRefreshTimer); backgroundRefreshTimer = null;
+  const video = $('#backgroundVideo'); if (video) { video.pause(); video.removeAttribute('src'); video.load(); }
+  save(); refreshBackgroundControls(); render(); await sendDisplays();
+};
+refreshBackgroundControls();
 $('#outputMode').onchange = async () => {
   data.outputMode = $('#outputMode').value === 'lower-third' ? 'lower-third' : 'full';
   if (current()) slideIndex = Math.min(slideIndex, slides(current()).length - 1);
