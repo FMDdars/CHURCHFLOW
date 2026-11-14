@@ -60,3 +60,14 @@
 .ndi-shortcut{padding:0 14px 12px}.ndi-shortcut .btn{border-color:#526fe5;color:#cbd6ff}.live .control-section{scroll-margin-top:12px}#ndiCard{scroll-margin-top:12px}
 
 #editSelectedSong[hidden],#removeBackground[hidden]{display:none!important}#backgroundVideo{display:none!important}
+
+
+/* ChurchFlow identity and first-launch splash */
+.brand-logo{display:block;width:auto;height:38px;max-width:150px;object-fit:contain}
+.splash-screen{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(circle at 50% 38%,#1d2b49 0%,#101827 44%,#080d16 100%);opacity:1;visibility:visible;transition:opacity .45s ease,visibility .45s ease}
+.splash-screen.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
+.splash-logo{display:block;width:min( min(72vw,360px), 360px);max-height:150px;object-fit:contain}
+.splash-screen p{margin:0;color:#aebbd2;font-size:13px;letter-spacing:.3px}
+.splash-loader{width:26px;height:26px;border:2px solid #43516c;border-top-color:#91a5ff;border-radius:50%;animation:churchflow-spin .85s linear infinite}
+@keyframes churchflow-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.splash-screen{transition:none}.splash-loader{animation:none}}

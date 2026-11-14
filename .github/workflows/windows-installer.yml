@@ -21,6 +21,16 @@ jobs:
       - name: Check out ChurchFlow
         uses: actions/checkout@v4
 
+      - name: Download the ChurchFlow logo for offline packaging
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path assets | Out-Null
+          curl.exe --fail --location --retry 3 --retry-all-errors --output assets/churchflow-logo.jpg "https://i.ibb.co/KxxrKggz/churchflow-logo.jpg"
+          $logo = [System.IO.File]::ReadAllBytes("assets/churchflow-logo.jpg")
+          if ($logo.Length -lt 1000 -or $logo[0] -ne 0xFF -or $logo[1] -ne 0xD8 -or $logo[2] -ne 0xFF) {
+            throw "The hosted ChurchFlow logo could not be downloaded as a valid JPEG."
+          }
+
       - name: Set up Node.js 24 LTS
         uses: actions/setup-node@v4
         with:

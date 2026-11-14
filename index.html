@@ -9,8 +9,13 @@
   <link rel="stylesheet" href="src/styles.css">
 </head>
 <body>
+  <div id="splashScreen" class="splash-screen" role="status" aria-label="Starting ChurchFlow">
+    <img class="splash-logo" src="assets/churchflow-logo.jpg" alt="ChurchFlow">
+    <p>Preparing your worship workspace…</p>
+    <span class="splash-loader" aria-hidden="true"></span>
+  </div>
   <header class="topbar">
-    <div class="brand"><div class="brand-mark">C</div><div><strong>ChurchFlow</strong><small>Worship presentation</small></div></div>
+    <div class="brand"><img class="brand-logo" src="assets/churchflow-logo.jpg" alt="ChurchFlow"><div><strong>ChurchFlow</strong><small>Worship presentation</small></div></div>
     <div class="top-actions"><span id="saveStatus" class="status">Saved locally</span><button id="checkUpdates" class="btn btn-subtle">Check for updates</button><button id="importPowerPoint" class="btn btn-subtle">＋ Import PowerPoint</button><button id="openDisplay" class="btn btn-primary">Open display</button></div>
   </header>
   <main class="workspace">

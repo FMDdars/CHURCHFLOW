@@ -907,3 +907,14 @@ window.addEventListener('keydown', async (event) => {
 });
 
 render();
+
+// Keep the branded splash visible while the initial workspace is rendered.
+window.addEventListener('load', () => {
+  window.setTimeout(() => {
+    const splash = document.getElementById('splashScreen');
+    if (splash) {
+      splash.classList.add('is-hidden');
+      window.setTimeout(() => splash.remove(), 500);
+    }
+  }, 650);
+}, { once: true });
