@@ -42,9 +42,9 @@ jobs:
         if: ${{ always() && !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/upload-artifact@v4
         with:
-          name: ChurchFlow-Windows-x64-v0.8.0
+          name: ChurchFlow-Windows-x64-v0.8.1
           path: |
-            dist/ChurchFlow-Setup-0.8.0-x64.exe
-            dist/ChurchFlow-Portable-0.8.0-x64.exe
+            dist/ChurchFlow-Setup-0.8.1-x64.exe
+            dist/ChurchFlow-Portable-0.8.1-x64.exe
           if-no-files-found: error
           retention-days: 30
