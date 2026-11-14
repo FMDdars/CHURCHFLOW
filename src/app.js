@@ -428,7 +428,8 @@ async function searchOnline() {
       .sort((a, b) => b.score - a.score).slice(0, 20)
       .map(({ item }) => ({ id: item.id, title: item.title, artist: 'Saved on this computer', body: item.body, source: item.source || 'Local library', provider: 'local', sourceUrl: 'https://docs.openlyrics.org/' }));
     results.push(...localMatches);
-    const betterCandidates = results.filter((item) => item.provider !== 'local' && item.provider !== 'gospel-hymns')
+    const betterCandidates = results.filter((item) => item.provider === 'lyrics-ovh' || item.provider === 'lrclib' || item.provider === 'lrc-red')
+      .sort((a, b) => (b.provider === 'lyrics-ovh' ? 1 : 0) - (a.provider === 'lyrics-ovh' ? 1 : 0))
       .slice(0, 10).map((item) => ({ title: item.title, artist: item.artist || '', album: item.album || '', duration: Number(item.duration || 0) }));
     if (betterCandidates.length) {
       try {

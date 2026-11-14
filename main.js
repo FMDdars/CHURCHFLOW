@@ -343,7 +343,7 @@ ipcMain.handle('churchflow:search-lrclib', async (_event, query) => {
   if (!Array.isArray(records)) throw new Error('LRCLIB returned an unexpected response.');
   return records.slice(0, 20).map((track) => ({
     id: String(track.id), number: '', title: String(track.trackName || track.name || 'Untitled track'),
-    artist: String(track.artistName || 'Unknown artist'), category: 'Community lyrics catalogue',
+    artist: String(track.artistName || 'Unknown artist'), album: String(track.albumName || ''), duration: Number(track.duration || 0), category: 'Community lyrics catalogue',
     source: 'LRCLIB', provider: 'lrclib', sourceUrl: 'https://lrclib.net'
   }));
 });
@@ -389,7 +389,7 @@ ipcMain.handle('churchflow:search-lrc-red', async (_event, query) => {
     const isrc = String(track.isrc).toUpperCase();
     return {
       id: isrc, isrc, number: '', title: String(track.title || 'Untitled track'),
-      artist: String(track.artist || 'Unknown artist'), category: String(track.album || 'Track'),
+      artist: String(track.artist || 'Unknown artist'), album: String(track.album || ''), duration: Number(track.duration || 0), category: String(track.album || 'Track'),
       source: 'lrc.red', provider: 'lrc-red', sourceUrl: `https://lrc.red/s/${isrc}`
     };
   });
