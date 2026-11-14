@@ -16,6 +16,8 @@ let liveItem = null;
 let displayWindows = [];
 let editingId = null;
 let onlineResults = [];
+let onlineSearchTimer = null;
+let onlineSearchRequest = 0;
 let loadedOnlineHymn = null;
 let pdfjsPromise = null;
 const presentationDocs = new Map();
@@ -403,6 +405,7 @@ async function openOnlineHymn(summary) {
 
 async function searchOnline() {
   const query = $('#search').value.trim();
+  const requestId = ++onlineSearchRequest;
   if (query.length < 2) { $('#onlineStatus').textContent = 'Enter at least two characters to search.'; return; }
   $('#onlineSearchButton').disabled = true;
   $('#onlineStatus').textContent = 'Searching Gospel Hymns & Songs, LRCLIB, lrc.red, Lyrics.ovh and cached Better Lyrics results…';
@@ -438,14 +441,18 @@ async function searchOnline() {
         sourceStatus.push(`Better Lyrics cached: ${better.length}`);
       } catch { sourceStatus.push('Better Lyrics: unavailable'); }
     }
+    if (requestId !== onlineSearchRequest) return;
     onlineResults = results;
     $('#onlineStatus').textContent = `${results.length} matches across sources · ${sourceStatus.join(' · ')}. Choose a result to preview its lyrics.`;
     renderOnlineResults();
   } catch (error) {
+    if (requestId !== onlineSearchRequest) return;
     onlineResults = [];
     $('#onlineStatus').textContent = error.message || 'The online lyrics services could not be reached.';
     renderOnlineResults();
-  } finally { $('#onlineSearchButton').disabled = false; }
+  } finally {
+    if (requestId === onlineSearchRequest) $('#onlineSearchButton').disabled = false;
+  }
 }
 
 async function importOpenLyrics() {
@@ -540,8 +547,28 @@ async function stopNdi() {
   $('#ndiStatus').textContent = 'NDI output stopped. Clean capture window remains available.';
 }
 
-$('#search').addEventListener('input', () => { if (tab !== 'online') renderLibrary(); });
-$('#search').addEventListener('keydown', (event) => { if (event.key === 'Enter' && tab === 'online') searchOnline(); });
+$('#search').addEventListener('input', () => {
+  if (tab !== 'online') { renderLibrary(); return; }
+  clearTimeout(onlineSearchTimer);
+  onlineSearchRequest += 1; // Ignore any older search while the user is still typing.
+  const query = $('#search').value.trim();
+  if (query.length < 2) {
+    onlineResults = [];
+    $('#onlineSearchButton').disabled = false;
+    $('#onlineStatus').textContent = 'Type at least two characters. Search will start automatically.';
+    renderOnlineResults();
+    return;
+  }
+  $('#onlineStatus').textContent = 'Searching will start automatically…';
+  onlineSearchTimer = setTimeout(() => searchOnline(), 650);
+});
+$('#search').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && tab === 'online') {
+    event.preventDefault();
+    clearTimeout(onlineSearchTimer);
+    searchOnline();
+  }
+});
 $('#onlineSearchButton').onclick = searchOnline;
 $('#importOpenLyrics').onclick = importOpenLyrics;
 
