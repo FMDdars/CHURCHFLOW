@@ -8,6 +8,11 @@ on:
 permissions:
   contents: write
 
+# Serialize releases so concurrent runs cannot publish an older version last.
+concurrency:
+  group: churchflow-windows-release
+  cancel-in-progress: false
+
 jobs:
   build-windows:
     runs-on: windows-latest
