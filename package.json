@@ -1,6 +1,6 @@
 {
   "name": "churchflow",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "Offline-first Windows worship presentation software",
   "main": "main.js",
   "author": "ChurchFlow Project",
