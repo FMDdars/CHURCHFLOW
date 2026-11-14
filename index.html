@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101522">
+  <title>ChurchFlow — Worship Presentation</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark">C</div><div><strong>ChurchFlow</strong><small>Worship presentation</small></div></div>
+    <div class="top-actions"><span id="saveStatus" class="status">Saved locally</span><button id="checkUpdates" class="btn btn-subtle">Check for updates</button><button id="importPowerPoint" class="btn btn-subtle">＋ Import PowerPoint</button><button id="openDisplay" class="btn btn-primary">Open display</button></div>
+  </header>
+  <main class="workspace">
+    <aside class="library panel">
+      <div class="panel-heading"><h2>Library</h2><button id="addSong" class="icon-btn" title="Add song">＋</button></div>
+      <div class="tabs"><button class="tab active" data-tab="songs">Songs</button><button class="tab" data-tab="slides">Slides</button><button class="tab" data-tab="presentations">PowerPoint</button><button class="tab" data-tab="online">Online lyrics</button></div>
+      <div class="search-row"><input id="search" class="search" placeholder="Search songs and slides…" /><button id="onlineSearchButton" class="btn btn-primary" hidden>Search</button></div><div id="onlineProviderTools" class="provider-tools" hidden><select id="lyricsProvider" aria-label="Lyrics provider"><option value="gospel-hymns">Gospel Hymns &amp; Songs</option><option value="musixmatch">Musixmatch (API key required)</option></select><button id="configureLyricsKey" class="btn btn-subtle">API key</button></div>
+      <p id="onlineStatus" class="online-status" hidden>Search an online hymn catalogue. Internet access is required.</p>
+      <div id="libraryList" class="library-list"></div>
+      <div id="libraryFooter" class="library-footer"><button id="addSlide" class="btn btn-subtle full">＋ New announcement slide</button><button id="importPowerPointLibrary" class="btn btn-subtle full">＋ Import PowerPoint / PDF</button></div>
+    </aside>
+    <section class="center panel">
+      <div class="panel-heading"><div><h2>Service order</h2><p class="muted">Arrange what happens during the service</p></div><button id="newService" class="btn btn-subtle">New service</button></div>
+      <div id="serviceList" class="service-list"></div>
+      <div class="center-bottom">
+        <div class="preview-heading"><div><h3>Slide preview</h3><span id="slideCounter" class="muted">Slide 1 of 1</span></div><div class="preview-nav"><button id="presenterViewButton" class="btn btn-subtle" hidden>Presenter view</button><button id="prevSlide" class="icon-btn">←</button><button id="nextSlide" class="icon-btn">→</button></div></div>
+        <div id="preview" class="slide-preview"><div class="preview-content"><span class="eyebrow">CHURCHFLOW PREVIEW</span><h1>Select an item</h1><p>Choose a song or slide from your library.</p></div></div>
+      </div>
+    </section>
+    <aside class="live panel">
+      <div class="panel-heading"><h2>Live control</h2><span class="live-dot">● READY</span></div>
+      <div id="livePreview" class="live-screen"><div><span class="eyebrow">LIVE OUTPUT</span><h2>ChurchFlow</h2><p>Your presentation starts here.</p></div></div>
+      <div class="live-buttons"><button id="goLive" class="btn btn-primary">Go live</button><button id="blackout" class="btn btn-danger">Black screen</button></div>
+      <div class="control-section"><h3>Display windows</h3><p class="muted">Open a separate output window for each connected screen. Your computer and graphics hardware determine the number of simultaneous displays.</p><button id="openAnother" class="btn btn-subtle full">＋ Open another display</button></div>
+      <div class="control-section"><h3>Quick controls</h3><div class="quick-grid"><button id="livePrev" class="btn btn-subtle">Previous</button><button id="liveNext" class="btn btn-subtle">Next</button><button id="clearLive" class="btn btn-subtle">Clear output</button><button id="restoreLive" class="btn btn-subtle">Restore output</button></div></div>
+      <div class="control-section">
+        <h3>Broadcast output</h3>
+        <div class="output-card">
+          <div class="output-title"><strong>Clean capture window</strong><span class="state-pill ready">Available</span></div>
+          <p class="muted">Open a clean audience-only window, then capture that window in vMix.</p>
+          <button id="openCapture" class="btn btn-subtle full">Open clean capture output</button>
+        </div>
+        <div class="output-card">
+          <div class="output-title"><strong>NDI sender</strong><span id="ndiState" class="state-pill pending">SDK required</span></div>
+          <label class="compact-label">Source name<input id="ndiName" type="text" value="ChurchFlow - Main Output"></label>
+          <label class="compact-label">Output profile<select id="ndiProfile"><option>1080p · 30 fps</option><option>1080p · 60 fps</option><option>720p · 30 fps</option><option>720p · 60 fps</option></select></label>
+          <button id="saveNdi" class="btn btn-subtle full">Save output settings</button><button id="startNdi" class="btn btn-primary full">Start native NDI output</button><button id="stopNdi" class="btn btn-subtle full" disabled>Stop NDI output</button>
+          <p id="ndiStatus" class="muted">Native NDI requires the official SDK and a locally built ChurchFlow NDI module. Clean capture remains available.</p>
+          <p class="muted"><a href="https://ndi.video/" target="_blank" rel="noreferrer">About NDI and SDK licensing</a></p>
+          <button id="runDiagnostics" class="btn btn-subtle full" type="button">Run system checks</button>
+          <pre id="diagnosticsOutput" class="diagnostics-output" aria-live="polite">System checks have not been run yet.</pre>
+        </div>
+      </div>
+      <div class="offline-note"><span>●</span> Offline-ready · Changes save on this device</div>
+    </aside>
+  </main>
+  <dialog id="updateDialog">
+    <div class="dialog-head"><div><h2 id="updateTitle">ChurchFlow updates</h2><p id="updateMessage" class="muted">Checking for updates…</p></div><button id="closeUpdate" class="icon-btn" type="button">×</button></div>
+    <div id="updateProgress" class="muted" aria-live="polite"></div>
+    <div class="dialog-actions"><button id="laterUpdate" class="btn btn-subtle" type="button">Remind me later</button><button id="installUpdate" class="btn btn-primary" type="button" hidden>Update now</button></div>
+  </dialog>
+  <dialog id="editor">
+    <form method="dialog" id="editorForm">
+      <div class="dialog-head"><h2 id="editorTitle">Add song</h2><button class="icon-btn" value="cancel">×</button></div>
+      <label>Title<input id="itemTitle" required maxlength="100" placeholder="Song or slide title"></label>
+      <label>Content<textarea id="itemBody" rows="8" placeholder="Enter lyrics or slide text. Separate slides with a line containing ---"></textarea></label>
+      <div class="dialog-actions"><button class="btn btn-subtle" value="cancel">Cancel</button><button id="saveItem" class="btn btn-primary" value="default">Save to library</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="presenterDialog" class="presenter-dialog">
+    <div class="dialog-head"><div><h2>PowerPoint Presenter View</h2><p id="presenterStatus" class="muted">Current slide, next slide and speaker notes</p></div><button id="closePresenter" class="icon-btn" type="button">×</button></div>
+    <div class="presenter-grid">
+      <section class="presenter-current"><h3>Current / selected slide</h3><canvas id="presenterCurrent"></canvas><div class="presenter-actions"><button id="presenterPrev" class="btn btn-subtle">Previous</button><button id="presenterGoLive" class="btn btn-primary">Send selected live</button><button id="presenterNext" class="btn btn-subtle">Next</button></div></section>
+      <section class="presenter-next"><h3>Next slide</h3><canvas id="presenterNextCanvas"></canvas><h3>Speaker notes</h3><pre id="presenterNotes">No speaker notes for this slide.</pre></section>
+    </div>
+  </dialog>
+  <dialog id="lyricsKeyDialog">
+    <form method="dialog" id="lyricsKeyForm">
+      <div class="dialog-head"><div><h2>Musixmatch API key</h2><p class="muted">Your key is encrypted in Windows secure storage.</p></div><button class="icon-btn" value="cancel">×</button></div>
+      <label>API key<input id="musixmatchApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your provider API key"></label>
+      <p class="rights-note">Musixmatch access depends on your provider account and plan. Full lyric retrieval, church projection and local saving may require specific licensing. ChurchFlow does not bypass those restrictions.</p>
+      <div class="dialog-actions"><button class="btn btn-subtle" value="cancel">Cancel</button><button id="saveLyricsKey" class="btn btn-primary" value="default">Save key securely</button></div>
+    </form>
+  </dialog>
+  <dialog id="onlineHymnDialog" class="online-dialog">
+    <div class="dialog-head"><div><h2 id="onlineHymnTitle">Online hymn</h2><p id="onlineHymnMeta" class="muted"></p></div><button id="closeOnlineHymn" class="icon-btn" type="button">×</button></div>
+    <pre id="onlineHymnLyrics" class="online-lyrics">Loading…</pre>
+    <p id="onlineRightsNote" class="rights-note">Before adding lyrics to your local library, confirm that your church has the required permission or that the song is in the public domain. The provider does not automatically grant projection or offline storage rights.</p>
+    <div class="dialog-actions"><button id="cancelOnlineHymn" class="btn btn-subtle" type="button">Close</button><button id="importOnlineHymn" class="btn btn-primary" type="button" disabled>Add to my library</button></div>
+  </dialog>
+  <script src="src/app.js"></script>
+</body>
+</html>

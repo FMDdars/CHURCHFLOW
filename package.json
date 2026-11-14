@@ -1,0 +1,83 @@
+{
+  "name": "churchflow",
+  "version": "0.8.0",
+  "description": "Offline-first Windows worship presentation software",
+  "main": "main.js",
+  "author": "ChurchFlow Project",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "check": "node scripts/check-project.cjs",
+    "pack": "electron-builder --dir",
+    "dist:win": "electron-builder --win --x64 --publish never",
+    "dist:win:nsis": "electron-builder --win nsis --x64 --publish never",
+    "dist:win:portable": "electron-builder --win portable --x64 --publish never",
+    "dist:win:publish": "electron-builder --win --x64 --publish always"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "pdfjs-dist": "^5.7.284",
+    "electron-updater": "^6.6.2"
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "^26.0.12",
+    "node-gyp": "^11.5.0",
+    "node-addon-api": "^8.5.0"
+  },
+  "build": {
+    "appId": "org.churchflow.presentation",
+    "productName": "ChurchFlow",
+    "asar": true,
+    "asarUnpack": [
+      "native/ndi/build/Release/**/*.node",
+      "native/ndi/build/Release/**/*.dll"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "manifest.webmanifest",
+      "display.html",
+      "src/**/*",
+      "assets/**/*",
+      "native/ndi/**/*",
+      "main.js",
+      "preload.js",
+      "package.json",
+      "README.md"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "assets/churchflow.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ChurchFlow",
+      "artifactName": "ChurchFlow-Setup-${version}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "ChurchFlow-Portable-${version}-${arch}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "FMDdars",
+        "repo": "CHURCHFLOW",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "engines": {
+    "node": ">=24.0.0 <27"
+  }
+}
