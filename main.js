@@ -368,6 +368,95 @@ ipcMain.handle('churchflow:get-lrclib-lyrics', async (_event, trackId) => {
   };
 });
 
+
+ipcMain.handle('churchflow:search-lrc-red', async (_event, query) => {
+  const q = String(query || '').trim();
+  if (q.length < 2 || q.length > 100) throw new Error('Enter between 2 and 100 characters to search.');
+  const url = new URL('https://lrc.red/search.json');
+  url.search = new URLSearchParams({ q }).toString();
+  const response = await fetch(url.toString(), {
+    headers: {
+      'User-Agent': 'ChurchFlow/0.8.1 (https://github.com/FMDdars/CHURCHFLOW)',
+      'X-Client-ID': 'ChurchFlow/0.8.1 (https://github.com/FMDdars/CHURCHFLOW/issues)'
+    },
+    signal: AbortSignal.timeout(18000)
+  });
+  if (response.status === 429) throw new Error('lrc.red is receiving too many requests. Please wait a moment and try again.');
+  if (!response.ok) throw new Error(`lrc.red returned HTTP ${response.status}.`);
+  const payload = await response.json();
+  if (!Array.isArray(payload?.hits)) throw new Error('lrc.red returned an unexpected response.');
+  return payload.hits.slice(0, 30).filter((track) => /^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$/i.test(String(track.isrc || ''))).map((track) => {
+    const isrc = String(track.isrc).toUpperCase();
+    return {
+      id: isrc, isrc, number: '', title: String(track.title || 'Untitled track'),
+      artist: String(track.artist || 'Unknown artist'), category: String(track.album || 'Track'),
+      source: 'lrc.red', provider: 'lrc-red', sourceUrl: `https://lrc.red/s/${isrc}`
+    };
+  });
+});
+
+ipcMain.handle('churchflow:get-lrc-red-lyrics', async (_event, trackIsrc) => {
+  const isrc = String(trackIsrc || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$/.test(isrc)) throw new Error('Invalid lrc.red track reference.');
+  const headers = {
+    'User-Agent': 'ChurchFlow/0.8.1 (https://github.com/FMDdars/CHURCHFLOW)',
+    'X-Client-ID': 'ChurchFlow/0.8.1 (https://github.com/FMDdars/CHURCHFLOW/issues)'
+  };
+  const metadataResponse = await fetch(`https://lrc.red/s/${isrc}.json`, {
+    headers, signal: AbortSignal.timeout(18000)
+  });
+  if (metadataResponse.status === 404) throw new Error('lrc.red does not have a lyrics record for this track.');
+  if (metadataResponse.status === 429) throw new Error('lrc.red is receiving too many requests. Please wait a moment and try again.');
+  if (!metadataResponse.ok) throw new Error(`lrc.red returned HTTP ${metadataResponse.status}.`);
+  const track = await metadataResponse.json();
+  const files = track?.files || {};
+  let body = '';
+
+  if (typeof files.lrc === 'string') {
+    try {
+      const url = new URL(files.lrc);
+      if (url.origin === 'https://lrc.red') {
+        const response = await fetch(url, { headers, signal: AbortSignal.timeout(18000) });
+        if (response.ok) {
+          const lrc = await response.text();
+          body = lrc.split(/\\r?\\n/).map((line) =>
+            line.replace(/^(?:\\s*\\[[0-9:.]+\\])+\\s*/, '').trim()
+          ).filter((line) => line && !/^\\[[a-z]{2,}:/i.test(line)).join('\\n').trim();
+        }
+      }
+    } catch (error) {
+      console.warn('Could not read lrc.red LRC file; trying TTML:', error.message);
+    }
+  }
+
+  if (!body && typeof files.ttml === 'string') {
+    const url = new URL(files.ttml);
+    if (url.origin !== 'https://lrc.red') throw new Error('lrc.red returned an unsupported lyrics URL.');
+    const response = await fetch(url, { headers, signal: AbortSignal.timeout(18000) });
+    if (response.status === 429) throw new Error('lrc.red is receiving too many requests. Please wait a moment and try again.');
+    if (response.ok) {
+      const xml = await response.text();
+      const decode = (value) => value
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+        .replace(/&#(\\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
+        .replace(/&#x([0-9a-f]+);/gi, (_m, n) => String.fromCodePoint(parseInt(n, 16)));
+      const paragraphs = [...xml.matchAll(/<p\\b[^>]*>([\\s\\S]*?)<\\/p>/gi)].map((match) =>
+        decode(match[1].replace(/<br\\s*\\/?\\s*>/gi, '\\n').replace(/<[^>]*>/g, '')).trim()
+      ).filter(Boolean);
+      body = paragraphs.join('\\n');
+      if (!body) body = decode(xml.replace(/<br\\s*\\/?\\s*>/gi, '\\n').replace(/<[^>]*>/g, '')).trim();
+    }
+  }
+
+  if (!body) throw new Error('No readable lyrics file is available for this lrc.red track.');
+  return {
+    id: isrc, isrc, title: String(track.title || 'Untitled track'),
+    artist: String(track.artist || 'Unknown artist'), body,
+    source: 'lrc.red', provider: 'lrc-red', sourceUrl: `https://lrc.red/s/${isrc}`
+  };
+});
+
 ipcMain.handle('churchflow:pdfjs-paths', () => ({
   moduleUrl: pathToFileURL(require.resolve('pdfjs-dist/build/pdf.mjs')).toString(),
   workerUrl: pathToFileURL(require.resolve('pdfjs-dist/build/pdf.worker.mjs')).toString()

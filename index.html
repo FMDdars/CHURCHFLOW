@@ -17,7 +17,7 @@
     <aside class="library panel">
       <div class="panel-heading"><h2>Library</h2><button id="addSong" class="icon-btn" title="Add song">＋</button></div>
       <div class="tabs"><button class="tab active" data-tab="songs">Songs</button><button class="tab" data-tab="slides">Slides</button><button class="tab" data-tab="presentations">PowerPoint</button><button class="tab" data-tab="online">Online lyrics</button></div>
-      <div class="search-row"><input id="search" class="search" placeholder="Search songs and slides…" /><button id="onlineSearchButton" class="btn btn-primary" hidden>Search</button></div><div id="onlineProviderTools" class="provider-tools" hidden><select id="lyricsProvider" aria-label="Lyrics provider"><option value="gospel-hymns">Gospel Hymns &amp; Songs</option><option value="lrclib">LRCLIB (Free · No API key)</option></select></div>
+      <div class="search-row"><input id="search" class="search" placeholder="Search songs and slides…" /><button id="onlineSearchButton" class="btn btn-primary" hidden>Search</button></div><div id="onlineProviderTools" class="provider-tools" hidden><select id="lyricsProvider" aria-label="Lyrics provider"><option value="gospel-hymns">Gospel Hymns &amp; Songs</option><option value="lrclib">LRCLIB (Free · No API key)</option><option value="lrc-red">lrc.red (Free · Synced lyrics)</option></select></div>
       <p id="onlineStatus" class="online-status" hidden>Search an online hymn catalogue. Internet access is required.</p>
       <div id="libraryList" class="library-list"></div>
       <div id="libraryFooter" class="library-footer"><button id="addSlide" class="btn btn-subtle full">＋ New announcement slide</button><button id="importPowerPointLibrary" class="btn btn-subtle full">＋ Import PowerPoint / PDF</button></div>
@@ -84,7 +84,7 @@
     </div>
   </dialog>
   <dialog id="onlineHymnDialog" class="online-dialog">
-    <div class="dialog-head"><div><h2 id="onlineHymnTitle">Online hymn</h2><p id="onlineHymnMeta" class="muted"></p></div><button id="closeOnlineHymn" class="icon-btn" type="button">×</button></div>
+    <div class="dialog-head"><div><h2 id="onlineHymnTitle">Online hymn</h2><p id="onlineHymnMeta" class="muted"></p><p class="muted"><a id="onlineSourceLink" href="https://lrc.red/" target="_blank" rel="noreferrer">Lyrics source</a></p></div><button id="closeOnlineHymn" class="icon-btn" type="button">×</button></div>
     <pre id="onlineHymnLyrics" class="online-lyrics">Loading…</pre>
     <p id="onlineRightsNote" class="rights-note">Before adding lyrics to your local library, confirm that your church has the required permission or that the song is in the public domain. The provider does not automatically grant projection or offline storage rights.</p>
     <div class="dialog-actions"><button id="cancelOnlineHymn" class="btn btn-subtle" type="button">Close</button><button id="importOnlineHymn" class="btn btn-primary" type="button" disabled>Add to my library</button></div>

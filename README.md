@@ -1,6 +1,6 @@
 # ChurchFlow
 
-ChurchFlow is an offline-first Windows worship presentation application. It provides a local song and slide library, service order, audience display windows, PowerPoint/PDF presentation import, Presenter View, clean capture output, lyrics search (including LRCLIB when configured), transparent lower-thirds lyrics output, and an optional native NDI sender.
+ChurchFlow is an offline-first Windows worship presentation application. It provides a local song and slide library, service order, audience display windows, PowerPoint/PDF presentation import, Presenter View, clean capture output, lyrics search through Gospel Hymns & Songs, LRCLIB and lrc.red, transparent lower-thirds lyrics output, and an optional native NDI sender.
 
 ## Build on Windows
 
@@ -27,10 +27,10 @@ Installed builds check GitHub Releases at startup. Operators can also select **C
 
 The C++ NDI addon is optional. Building it requires the official NDI SDK and licence for the intended use, Windows x64, Visual Studio Build Tools with the MSVC C++ workload, and Node.js 24.x–26.x.
 
-Set `NDI_SDK_DIR` to the SDK root, then run `Build-NDI-Module.bat` from the project root. The script builds the addon under `native/ndi`. After a successful build, run `Build-ChurchFlow-Installer.bat` to package it. Clean capture output remains available without the NDI addon. Lyrics can be shown full-screen or as a transparent lower-third overlay; for alpha-capable vMix workflows, use NDI after building and testing the optional NDI addon. Ordinary desktop capture may flatten transparency. The LRCLIB API key is entered in ChurchFlow's Online lyrics tab and stored using Windows secure storage. Lyrics access and projection/storage rights depend on the provider plan and licence.
+Set `NDI_SDK_DIR` to the SDK root, then run `Build-NDI-Module.bat` from the project root. The script builds the addon under `native/ndi`. After a successful build, run `Build-ChurchFlow-Installer.bat` to package it. Clean capture output remains available without the NDI addon. Lyrics can be shown full-screen or as a transparent lower-third overlay; for alpha-capable vMix workflows, use NDI after building and testing the optional NDI addon. Ordinary desktop capture may flatten transparency. Lyrics access and projection/storage rights depend on the provider's terms and the church's licence.
 
 NDI functionality must be tested on the target Windows system and with the intended receiver before production use.
 
 ## Online lyrics
 
-The Online lyrics tab includes LRCLIB, a free community-maintained lyrics API that requires no API key or account. Search by song title, artist or keywords. LRCLIB may not contain every track, and requests are subject to its rate limits. ChurchFlow identifies itself in API requests and handles rate-limit responses. Before importing or projecting lyrics, confirm that your church has the necessary permission or that the work is public domain; an API listing does not grant projection or offline-storage rights. See the [LRCLIB API documentation](https://lrclib.net/docs).
+The Online lyrics tab keeps **Gospel Hymns & Songs** and **LRCLIB** as permanent providers and adds **lrc.red** as an additional source. LRCLIB is a free community-maintained lyrics API that requires no API key or account. lrc.red is also free, supports title/artist search and full-text lyric search, and provides TTML and LRC files with timing information where available. ChurchFlow credits and links to lrc.red when displaying its lyrics. Provider catalogues and uptime can vary, and requests are subject to rate limits. Before importing or projecting lyrics, confirm that your church has the necessary permission or that the work is public domain; an API listing does not grant projection or offline-storage rights. See the [LRCLIB API documentation](https://lrclib.net/docs) and [lrc.red API documentation](https://lrc.red/api).

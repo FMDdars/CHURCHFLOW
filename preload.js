@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('churchflowDesktop', Object.freeze({
   getGospelHymn: (number) => ipcRenderer.invoke('churchflow:get-gospel-hymn', number),
   searchLrclib: (query) => ipcRenderer.invoke('churchflow:search-lrclib', query),
   getLrclibLyrics: (trackId) => ipcRenderer.invoke('churchflow:get-lrclib-lyrics', trackId),
+  searchLrcRed: (query) => ipcRenderer.invoke('churchflow:search-lrc-red', query),
+  getLrcRedLyrics: (isrc) => ipcRenderer.invoke('churchflow:get-lrc-red-lyrics', isrc),
   getPdfJsPaths: () => ipcRenderer.invoke('churchflow:pdfjs-paths'),
   importPresentation: () => ipcRenderer.invoke('churchflow:import-presentation'),
   getPresentationPdf: (presentationId) => ipcRenderer.invoke('churchflow:get-presentation-pdf', presentationId),
