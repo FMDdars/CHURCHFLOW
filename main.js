@@ -441,11 +441,11 @@ ipcMain.handle('churchflow:get-lrc-red-lyrics', async (_event, trackIsrc) => {
         .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
         .replace(/&#(\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
         .replace(/&#x([0-9a-f]+);/gi, (_m, n) => String.fromCodePoint(parseInt(n, 16)));
-      const paragraphs = [...xml.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)].map((match) =>
-        decode(match[1].replace(/<br\s*\/?\s*>/gi, '\n').replace(/<[^>]*>/g, '')).trim()
+      const paragraphs = [...xml.matchAll(/<p\b[^>]*>([\s\S]*?)<[/]p>/gi)].map((match) =>
+        decode(match[1].replace(/<br[^>]*>/gi, '\n').replace(/<[^>]*>/g, '')).trim()
       ).filter(Boolean);
       body = paragraphs.join('\n');
-      if (!body) body = decode(xml.replace(/<br\s*\/?\s*>/gi, '\n').replace(/<[^>]*>/g, '')).trim();
+      if (!body) body = decode(xml.replace(/<br[^>]*>/gi, '\n').replace(/<[^>]*>/g, '')).trim();
     }
   }
 
