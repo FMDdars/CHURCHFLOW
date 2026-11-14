@@ -302,8 +302,13 @@ ipcMain.handle('churchflow:diagnostics', async () => {
   const libreOfficeOnPath = libreOfficeExplicit || await commandExists(process.platform === 'win32' ? 'where.exe' : 'which', ['soffice']);
   const addonPath = path.join(app.isPackaged ? process.resourcesPath : __dirname, ...(app.isPackaged ? ['app.asar.unpacked'] : []), 'native', 'ndi', 'build', 'Release', 'churchflow_ndi.node');
   const ndiModuleAvailable = Boolean(loadNdiAddon());
+  const programFiles = process.env.PROGRAMFILES || 'C:\\Program Files';
   const ndiDllCandidates = process.platform === 'win32' ? [
     path.join(path.dirname(addonPath), 'Processing.NDI.Lib.x64.dll'),
+    process.env.NDI_RUNTIME_DIR_V6 ? path.join(process.env.NDI_RUNTIME_DIR_V6, 'Processing.NDI.Lib.x64.dll') : '',
+    process.env.NDI_RUNTIME_DIR_V5 ? path.join(process.env.NDI_RUNTIME_DIR_V5, 'Processing.NDI.Lib.x64.dll') : '',
+    path.join(programFiles, 'NDI', 'NDI 6 Runtime', 'Processing.NDI.Lib.x64.dll'),
+    path.join(programFiles, 'NDI', 'NDI 5 Runtime', 'Processing.NDI.Lib.x64.dll'),
     path.join(process.env.NDI_SDK_DIR || '', 'Bin', 'x64', 'Processing.NDI.Lib.x64.dll'),
     path.join(process.env.NDI_SDK_DIR || '', 'Bin', 'Processing.NDI.Lib.x64.dll'),
     path.join(process.env.WINDIR || 'C:\\Windows', 'System32', 'Processing.NDI.Lib.x64.dll')
