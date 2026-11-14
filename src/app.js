@@ -601,7 +601,20 @@ $('#saveItem').onclick = (event) => {
 };
 
 $('#prevSlide').onclick = () => { slideIndex = Math.max(0, slideIndex - 1); render(); };
-$('#nextSlide').onclick = () => { slideIndex = Math.min(slides(current()).length - 1, slideIndex + 1); render(); };
+$('#nextSlide').onclick = async () => {
+  const item = current();
+  slideIndex = Math.min(slides(item).length - 1, slideIndex + 1);
+  if (item?.type === 'song') {
+    // For lyrics, advancing the preview also sends that lyric slide to the program output.
+    liveItem = JSON.parse(JSON.stringify(item));
+    liveIndex = slideIndex;
+    liveBlank = false;
+    render();
+    await sendDisplays();
+    return;
+  }
+  render();
+};
 $('#goLive').onclick = async () => {
   liveItem = current() ? JSON.parse(JSON.stringify(current())) : null;
   liveIndex = slideIndex; liveBlank = false; render(); await sendDisplays();
