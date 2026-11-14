@@ -264,7 +264,7 @@ async function createOutputCanvas(item, index, blank = false) {
   }
 
   const body = slides(item)[index] || '';
-  if (data.outputMode === 'lower-third') {
+  if (data.outputMode === 'lower-third' && item?.type === 'song') {
     // Transparent canvas with a translucent, bottom-aligned lyric panel.
     const panelTop = 790;
     const panelHeight = 250;
