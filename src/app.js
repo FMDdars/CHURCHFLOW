@@ -298,8 +298,8 @@ async function createOutputCanvas(item, index, blank = false) {
     ctx.fillText(String(item?.title || '').slice(0, 90), 100, panelTop + 28);
     ctx.fillStyle = '#ffffff';
     const lines = wrapCanvasText(ctx, body, 1720);
-    const visibleLines = lines.slice(0, 3);
-    const fontSize = visibleLines.length >= 3 ? 43 : visibleLines.length === 2 ? 49 : 56;
+    const visibleLines = lines.slice(0, 2);
+    const fontSize = visibleLines.length >= 2 ? 54 : 62;
     ctx.font = `600 ${fontSize}px Arial`;
     const lineHeight = fontSize * 1.28;
     let y = panelTop + 78;
@@ -318,7 +318,7 @@ async function createOutputCanvas(item, index, blank = false) {
   const lines = wrapCanvasText(ctx, body, 1560);
   const lineHeight = Math.min(88, 700 / Math.max(1, lines.length));
   y = Math.max(560, (1080 - lines.length * lineHeight) / 2 + 100);
-  lines.slice(0, 8).forEach((line) => { ctx.fillText(line, 960, y); y += lineHeight; });
+  lines.slice(0, 4).forEach((line) => { ctx.fillText(line, 960, y); y += lineHeight; });
   return canvas;
 }
 
