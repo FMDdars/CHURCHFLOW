@@ -21,7 +21,7 @@ Presenter View follows the currently live slide when the selected PowerPoint pre
 
 ## Updates
 
-Installed builds check GitHub Releases at startup. Operators can also select **Check for updates**. Updates are downloaded only after the operator chooses **Download update**, and installed only after **Restart and install** is selected. A published GitHub Release with the matching version and Windows assets is required.
+ChurchFlow checks for updates at startup and when you select **Check for updates**. New Windows releases are published automatically by the project build workflow. When an update is found, select **Download update**, then **Restart and install** when the download completes. You do not need to visit GitHub or download an installer manually. Automatic in-app updates are supported by the installed NSIS setup version; the portable build should be updated by downloading and running the latest setup installer.
 
 ## Optional NDI output
 

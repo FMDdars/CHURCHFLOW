@@ -1,10 +1,9 @@
-name: Build ChurchFlow for Windows
+name: Build and publish ChurchFlow for Windows
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    tags: ['v*']
 
 permissions:
   contents: write
@@ -25,26 +24,24 @@ jobs:
       - name: Install project dependencies
         run: npm install
 
+      - name: Assign a unique release version
+        run: npm version "0.9.${{ github.run_number }}" --no-git-tag-version
+
       - name: Check project files and JavaScript syntax
         run: npm run check
 
-      - name: Build Windows installer and portable app
-        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        run: npm run dist:win
-
-      - name: Build and publish GitHub Release assets
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+      - name: Build and publish Windows installer and portable app
         run: npm run dist:win:publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Windows build files
-        if: ${{ always() && !startsWith(github.ref, 'refs/tags/') }}
+      - name: Keep a copy of Windows build files in Actions
         uses: actions/upload-artifact@v4
         with:
-          name: ChurchFlow-Windows-x64-v0.8.1
+          name: ChurchFlow-Windows-x64-v0.9.${{ github.run_number }}
           path: |
-            dist/ChurchFlow-Setup-0.8.1-x64.exe
-            dist/ChurchFlow-Portable-0.8.1-x64.exe
+            dist/ChurchFlow-Setup-0.9.${{ github.run_number }}-x64.exe
+            dist/ChurchFlow-Portable-0.9.${{ github.run_number }}-x64.exe
+            dist/latest.yml
           if-no-files-found: error
           retention-days: 30

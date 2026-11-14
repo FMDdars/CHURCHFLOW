@@ -4,7 +4,7 @@ cd /d "%~dp0"
 title ChurchFlow Windows Installer Builder
 
 echo ==================================================
-echo          CHURCHFLOW WINDOWS BUILD v0.8.1
+echo          CHURCHFLOW WINDOWS BUILD v0.9.0
 echo ==================================================
 echo.
 echo This script BUILDS the installer. It does not launch
@@ -56,7 +56,7 @@ call npm run dist:win
 if errorlevel 1 goto failed
 
 :verify_build
-if not exist "dist\ChurchFlow-Setup-0.8.1-x64.exe" (
+if not exist "dist\ChurchFlow-Setup-0.9.0-x64.exe" (
   echo ERROR: The installer file was not found after the build.
   echo Check the electron-builder output above and the dist folder.
   goto failed
@@ -65,11 +65,11 @@ echo.
 echo ==================================================
 echo BUILD COMPLETE
 echo ==================================================
-echo Installer: %CD%\dist\ChurchFlow-Setup-0.8.1-x64.exe
-echo Portable:  %CD%\dist\ChurchFlow-Portable-0.8.1-x64.exe
+echo Installer: %CD%\dist\ChurchFlow-Setup-0.9.0-x64.exe
+echo Portable:  %CD%\dist\ChurchFlow-Portable-0.9.0-x64.exe
 echo Opening the dist folder now...
 start "" explorer "%CD%\dist"
-echo Run ChurchFlow-Setup-0.8.1-x64.exe to install ChurchFlow.
+echo Run ChurchFlow-Setup-0.9.0-x64.exe to install ChurchFlow.
 echo.
 pause
 exit /b 0
