@@ -460,33 +460,33 @@ ipcMain.handle('churchflow:get-lrc-red-lyrics', async (_event, trackIsrc) => {
 
 function cleanLyricsXml(value) {
   return String(value || '')
-    .replace(/<br\\s*\\/?\\s*>/gi, '\\n')
-    .replace(/<\\/(?:lines|verse|p)>/gi, '\\n')
+    .replace(/<br\s*\/?\s*>/gi, '\n')
+    .replace(/<\/(?:lines|verse|p)>/gi, '\n')
     .replace(/<[^>]*>/g, '')
     .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
-    .replace(/&#(\\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#(\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
     .replace(/&#x([0-9a-f]+);/gi, (_m, n) => String.fromCodePoint(parseInt(n, 16)))
-    .replace(/[ \\t]+\\n/g, '\\n').replace(/\\n{3,}/g, '\\n\\n').trim();
+    .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function parseOpenLyricsXml(xml, originalName) {
   const source = String(xml || '');
-  if (!/<song(?:\\s|>)/i.test(source) || !/<lyrics(?:\\s|>)/i.test(source)) return null;
-  const titlesBlock = source.match(/<titles?\\b[^>]*>([\\s\\S]*?)<\\/titles?>/i);
-  const titleMatch = titlesBlock?.[1]?.match(/<title\\b[^>]*>([\\s\\S]*?)<\\/title>/i);
+  if (!/<song(?:\s|>)/i.test(source) || !/<lyrics(?:\s|>)/i.test(source)) return null;
+  const titlesBlock = source.match(/<titles?\b[^>]*>([\s\S]*?)<\/titles?>/i);
+  const titleMatch = titlesBlock?.[1]?.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
   const title = cleanLyricsXml(titleMatch?.[1]) || path.basename(originalName, path.extname(originalName));
   const verses = [];
-  for (const match of source.matchAll(/<verse\\b[^>]*>([\\s\\S]*?)<\\/verse>/gi)) {
+  for (const match of source.matchAll(/<verse\b[^>]*>([\s\S]*?)<\/verse>/gi)) {
     const verseSource = match[1];
-    const lineBlocks = [...verseSource.matchAll(/<lines\\b[^>]*>([\\s\\S]*?)<\\/lines>/gi)].map((line) => cleanLyricsXml(line[1]));
-    const text = (lineBlocks.length ? lineBlocks : [cleanLyricsXml(verseSource)]).filter(Boolean).join('\\n');
+    const lineBlocks = [...verseSource.matchAll(/<lines\b[^>]*>([\s\S]*?)<\/lines>/gi)].map((line) => cleanLyricsXml(line[1]));
+    const text = (lineBlocks.length ? lineBlocks : [cleanLyricsXml(verseSource)]).filter(Boolean).join('\n');
     if (text) verses.push(text);
   }
-  const body = verses.join('\\n---\\n').trim();
+  const body = verses.join('\n---\n').trim();
   if (!body) return null;
-  const authorsBlock = source.match(/<authors?\\b[^>]*>([\\s\\S]*?)<\\/authors?>/i);
-  const author = authorsBlock ? cleanLyricsXml(authorsBlock[1].replace(/<\\/?author[^>]*>/gi, '')) : '';
+  const authorsBlock = source.match(/<authors?\b[^>]*>([\s\S]*?)<\/authors?>/i);
+  const author = authorsBlock ? cleanLyricsXml(authorsBlock[1].replace(/<\/?author[^>]*>/gi, '')) : '';
   return { title, body, author, originalName };
 }
 
@@ -554,10 +554,10 @@ ipcMain.handle('churchflow:get-lyrics-ovh', async (_event, artist, title) => {
 
 function ttmlToText(ttml) {
   const xml = String(ttml || '');
-  const paragraphs = [...xml.matchAll(/<p\\b[^>]*>([\\s\\S]*?)<[/]p>/gi)].map((match) =>
-    cleanLyricsXml(match[1].replace(/<span\\b[^>]*>/gi, '').replace(/<\\/span>/gi, ''))
+  const paragraphs = [...xml.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)].map((match) =>
+    cleanLyricsXml(match[1].replace(/<span\b[^>]*>/gi, '').replace(/<\/span>/gi, ''))
   ).filter(Boolean);
-  return paragraphs.join('\\n').trim();
+  return paragraphs.join('\n').trim();
 }
 
 async function fetchBetterLyrics(track) {
