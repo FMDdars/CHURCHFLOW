@@ -419,9 +419,9 @@ ipcMain.handle('churchflow:get-lrc-red-lyrics', async (_event, trackIsrc) => {
         const response = await fetch(url, { headers, signal: AbortSignal.timeout(18000) });
         if (response.ok) {
           const lrc = await response.text();
-          body = lrc.split(/\\r?\\n/).map((line) =>
-            line.replace(/^(?:\\s*\\[[0-9:.]+\\])+\\s*/, '').trim()
-          ).filter((line) => line && !/^\\[[a-z]{2,}:/i.test(line)).join('\\n').trim();
+          body = lrc.split(/\r?\n/).map((line) =>
+            line.replace(/^(?:\s*\[[0-9:.]+\])+\s*/, '').trim()
+          ).filter((line) => line && !/^\[[a-z]{2,}:/i.test(line)).join('\n').trim();
         }
       }
     } catch (error) {
@@ -439,13 +439,13 @@ ipcMain.handle('churchflow:get-lrc-red-lyrics', async (_event, trackIsrc) => {
       const decode = (value) => value
         .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
         .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
-        .replace(/&#(\\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
+        .replace(/&#(\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
         .replace(/&#x([0-9a-f]+);/gi, (_m, n) => String.fromCodePoint(parseInt(n, 16)));
-      const paragraphs = [...xml.matchAll(/<p\\b[^>]*>([\\s\\S]*?)<\\/p>/gi)].map((match) =>
-        decode(match[1].replace(/<br\\s*\\/?\\s*>/gi, '\\n').replace(/<[^>]*>/g, '')).trim()
+      const paragraphs = [...xml.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)].map((match) =>
+        decode(match[1].replace(/<br\s*\/?\s*>/gi, '\n').replace(/<[^>]*>/g, '')).trim()
       ).filter(Boolean);
-      body = paragraphs.join('\\n');
-      if (!body) body = decode(xml.replace(/<br\\s*\\/?\\s*>/gi, '\\n').replace(/<[^>]*>/g, '')).trim();
+      body = paragraphs.join('\n');
+      if (!body) body = decode(xml.replace(/<br\s*\/?\s*>/gi, '\n').replace(/<[^>]*>/g, '')).trim();
     }
   }
 
