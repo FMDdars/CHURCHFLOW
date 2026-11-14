@@ -27,6 +27,12 @@ jobs:
       - name: Assign a unique release version
         run: npm version "0.9.${{ github.run_number }}" --no-git-tag-version
 
+      - name: Create release tag for the updater
+        shell: bash
+        run: |
+          git tag "v0.9.${{ github.run_number }}"
+          git push origin "v0.9.${{ github.run_number }}"
+
       - name: Check project files and JavaScript syntax
         run: npm run check
 
