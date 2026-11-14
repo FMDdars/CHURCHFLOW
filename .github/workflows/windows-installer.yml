@@ -21,7 +21,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
 
       - name: Install project dependencies
         run: npm install
@@ -30,17 +29,17 @@ jobs:
         run: npm run check
 
       - name: Build Windows installer and portable app
-        if: !startsWith(github.ref, 'refs/tags/')
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         run: npm run dist:win
 
       - name: Build and publish GitHub Release assets
-        if: startsWith(github.ref, 'refs/tags/')
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         run: npm run dist:win:publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Windows build files
-        if: always() && !startsWith(github.ref, 'refs/tags/')
+        if: ${{ always() && !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/upload-artifact@v4
         with:
           name: ChurchFlow-Windows-x64-v0.8.0
