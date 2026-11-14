@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, safeStorage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -12,7 +12,6 @@ const execFileAsync = promisify(execFile);
 
 const APP_TITLE = 'ChurchFlow';
 const GOSPEL_HYMNS_API = 'https://gospel-hymns.onrender.com/api/v1';
-const MUSIXMATCH_API = 'https://api.musixmatch.com/ws/1.1';
 let mainWindow = null;
 let ndiNative = null;
 let ndiTimer = null;
@@ -251,12 +250,6 @@ async function commandExists(command, args = ['--version']) {
   }
 }
 
-function readEncryptedMusixmatchKey() {
-  const keyPath = path.join(app.getPath('userData'), 'musixmatch-key.bin');
-  if (!fs.existsSync(keyPath) || !safeStorage.isEncryptionAvailable()) return '';
-  try { return safeStorage.decryptString(fs.readFileSync(keyPath)); } catch { return ''; }
-}
-
 ipcMain.handle('churchflow:app-version', () => app.getVersion());
 ipcMain.handle('churchflow:update-state', () => updateState);
 ipcMain.handle('churchflow:check-for-updates', async () => {
@@ -335,47 +328,43 @@ ipcMain.handle('churchflow:get-gospel-hymn', async (_event, hymnNumber) => {
   return { id: number, number, title: String(hymn.title || hymn.titleWithHymnNumber || `Hymn ${number}`), category: String(hymn.category || 'Hymn'), body, source: 'Gospel Hymns & Songs', provider: 'gospel-hymns', sourceUrl: `${GOSPEL_HYMNS_API}/hymn/${number}` };
 });
 
-ipcMain.handle('churchflow:set-musixmatch-key', async (_event, key) => {
-  const clean = String(key || '').trim();
-  if (!clean || clean.length > 300) throw new Error('Enter a valid Musixmatch API key.');
-  if (!safeStorage.isEncryptionAvailable()) throw new Error('Windows secure storage is not available, so ChurchFlow will not save this API key.');
-  await fsp.mkdir(app.getPath('userData'), { recursive: true });
-  await fsp.writeFile(path.join(app.getPath('userData'), 'musixmatch-key.bin'), safeStorage.encryptString(clean));
-  return { saved: true };
-});
-ipcMain.handle('churchflow:has-musixmatch-key', () => Boolean(readEncryptedMusixmatchKey()));
-ipcMain.handle('churchflow:search-musixmatch', async (_event, query) => {
-  const key = readEncryptedMusixmatchKey();
-  if (!key) throw new Error('Add your Musixmatch API key using the API Key button first.');
+ipcMain.handle('churchflow:search-lrclib', async (_event, query) => {
   const q = String(query || '').trim();
   if (q.length < 2 || q.length > 100) throw new Error('Enter between 2 and 100 characters to search.');
-  const url = new URL(`${MUSIXMATCH_API}/track.search`);
-  url.search = new URLSearchParams({ format: 'json', q: q, page_size: '25', s_track_rating: 'desc', apikey: key }).toString();
-  const payload = await fetchJson(url.toString());
-  const status = payload?.message?.header?.status_code;
-  if (status && status !== 200) throw new Error(`Musixmatch returned status ${status}. Check your API plan and key.`);
-  const tracks = payload?.message?.body?.track_list || [];
-  return tracks.map((entry) => entry.track).filter(Boolean).map((track) => ({
-    id: String(track.track_id), number: '', title: String(track.track_name || 'Untitled track'),
-    artist: String(track.artist_name || 'Unknown artist'), category: 'Licensed lyrics catalogue',
-    source: 'Musixmatch', provider: 'musixmatch', sourceUrl: String(track.track_share_url || 'https://www.musixmatch.com/')
+  const url = new URL('https://lrclib.net/api/search');
+  url.search = new URLSearchParams({ q }).toString();
+  const response = await fetch(url.toString(), {
+    headers: { 'User-Agent': 'ChurchFlow/0.8.1 (https://github.com/FMDdars/CHURCHFLOW)' },
+    signal: AbortSignal.timeout(18000)
+  });
+  if (response.status === 429) throw new Error('LRCLIB is receiving too many requests. Please wait a moment and try again.');
+  if (!response.ok) throw new Error(`LRCLIB returned HTTP ${response.status}.`);
+  const records = await response.json();
+  if (!Array.isArray(records)) throw new Error('LRCLIB returned an unexpected response.');
+  return records.slice(0, 20).map((track) => ({
+    id: String(track.id), number: '', title: String(track.trackName || track.name || 'Untitled track'),
+    artist: String(track.artistName || 'Unknown artist'), category: 'Community lyrics catalogue',
+    source: 'LRCLIB', provider: 'lrclib', sourceUrl: 'https://lrclib.net'
   }));
 });
-ipcMain.handle('churchflow:get-musixmatch-lyrics', async (_event, trackId) => {
-  const key = readEncryptedMusixmatchKey();
-  if (!key) throw new Error('Add your Musixmatch API key first.');
+ipcMain.handle('churchflow:get-lrclib-lyrics', async (_event, trackId) => {
   const id = String(trackId || '').trim();
-  if (!/^\d{1,15}$/.test(id)) throw new Error('Invalid track reference.');
-  const url = new URL(`${MUSIXMATCH_API}/track.lyrics.get`);
-  url.search = new URLSearchParams({ format: 'json', track_id: id, apikey: key }).toString();
-  const payload = await fetchJson(url.toString());
-  const status = payload?.message?.header?.status_code;
-  if (status && status !== 200) throw new Error(`Musixmatch returned status ${status}. Your account may not include full lyrics access.`);
-  const lyrics = payload?.message?.body?.lyrics;
-  if (!lyrics?.lyrics_body) throw new Error('This track has no full lyric text available through your current Musixmatch plan.');
+  if (!/^\d{1,12}$/.test(id)) throw new Error('Invalid LRCLIB track reference.');
+  const response = await fetch(`https://lrclib.net/api/get/${id}`, {
+    headers: { 'User-Agent': 'ChurchFlow/0.8.1 (https://github.com/FMDdars/CHURCHFLOW)' },
+    signal: AbortSignal.timeout(18000)
+  });
+  if (response.status === 404) throw new Error('LRCLIB no longer has this lyrics record.');
+  if (response.status === 429) throw new Error('LRCLIB is receiving too many requests. Please wait a moment and try again.');
+  if (!response.ok) throw new Error(`LRCLIB returned HTTP ${response.status}.`);
+  const track = await response.json();
+  const synced = String(track.syncedLyrics || '');
+  const plain = String(track.plainLyrics || '');
+  const body = plain.trim() || synced.split('\n').map((line) => line.replace(/^\s*\[[0-9:.]+\]\s*/, '')).filter(Boolean).join('\n').trim();
+  if (!body) throw new Error('No plain or synced lyrics are available for this track.');
   return {
-    id, title: 'Musixmatch track', body: String(lyrics.lyrics_body).trim(), source: 'Musixmatch', provider: 'musixmatch',
-    sourceUrl: 'https://www.musixmatch.com/', copyright: String(lyrics.lyrics_copyright || '')
+    id, title: String(track.trackName || track.name || 'Untitled track'),
+    body, source: 'LRCLIB', provider: 'lrclib', sourceUrl: 'https://lrclib.net'
   };
 });
 

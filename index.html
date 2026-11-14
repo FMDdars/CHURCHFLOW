@@ -17,7 +17,7 @@
     <aside class="library panel">
       <div class="panel-heading"><h2>Library</h2><button id="addSong" class="icon-btn" title="Add song">＋</button></div>
       <div class="tabs"><button class="tab active" data-tab="songs">Songs</button><button class="tab" data-tab="slides">Slides</button><button class="tab" data-tab="presentations">PowerPoint</button><button class="tab" data-tab="online">Online lyrics</button></div>
-      <div class="search-row"><input id="search" class="search" placeholder="Search songs and slides…" /><button id="onlineSearchButton" class="btn btn-primary" hidden>Search</button></div><div id="onlineProviderTools" class="provider-tools" hidden><select id="lyricsProvider" aria-label="Lyrics provider"><option value="gospel-hymns">Gospel Hymns &amp; Songs</option><option value="musixmatch">Musixmatch (API key required)</option></select><button id="configureLyricsKey" class="btn btn-subtle">API key</button></div>
+      <div class="search-row"><input id="search" class="search" placeholder="Search songs and slides…" /><button id="onlineSearchButton" class="btn btn-primary" hidden>Search</button></div><div id="onlineProviderTools" class="provider-tools" hidden><select id="lyricsProvider" aria-label="Lyrics provider"><option value="gospel-hymns">Gospel Hymns &amp; Songs</option><option value="lrclib">LRCLIB (Free · No API key)</option></select></div>
       <p id="onlineStatus" class="online-status" hidden>Search an online hymn catalogue. Internet access is required.</p>
       <div id="libraryList" class="library-list"></div>
       <div id="libraryFooter" class="library-footer"><button id="addSlide" class="btn btn-subtle full">＋ New announcement slide</button><button id="importPowerPointLibrary" class="btn btn-subtle full">＋ Import PowerPoint / PDF</button></div>
@@ -82,14 +82,6 @@
       <section class="presenter-current"><h3>Current / selected slide</h3><canvas id="presenterCurrent"></canvas><div class="presenter-actions"><button id="presenterPrev" class="btn btn-subtle">Previous</button><button id="presenterGoLive" class="btn btn-primary">Send selected live</button><button id="presenterNext" class="btn btn-subtle">Next</button></div></section>
       <section class="presenter-next"><h3>Next slide</h3><canvas id="presenterNextCanvas"></canvas><h3>Speaker notes</h3><pre id="presenterNotes">No speaker notes for this slide.</pre></section>
     </div>
-  </dialog>
-  <dialog id="lyricsKeyDialog">
-    <form method="dialog" id="lyricsKeyForm">
-      <div class="dialog-head"><div><h2>Musixmatch API key</h2><p class="muted">Your key is encrypted in Windows secure storage.</p></div><button class="icon-btn" value="cancel">×</button></div>
-      <label>API key<input id="musixmatchApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste your provider API key"></label>
-      <p class="rights-note">Musixmatch access depends on your provider account and plan. Full lyric retrieval, church projection and local saving may require specific licensing. ChurchFlow does not bypass those restrictions.</p>
-      <div class="dialog-actions"><button class="btn btn-subtle" value="cancel">Cancel</button><button id="saveLyricsKey" class="btn btn-primary" value="default">Save key securely</button></div>
-    </form>
   </dialog>
   <dialog id="onlineHymnDialog" class="online-dialog">
     <div class="dialog-head"><div><h2 id="onlineHymnTitle">Online hymn</h2><p id="onlineHymnMeta" class="muted"></p></div><button id="closeOnlineHymn" class="icon-btn" type="button">×</button></div>

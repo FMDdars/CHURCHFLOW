@@ -130,7 +130,7 @@ function renderOnlineResults() {
     const element = document.createElement('button'); element.type = 'button'; element.className = 'library-item online-result';
     const title = document.createElement('div'); title.className = 'item-title'; title.textContent = result.title;
     const meta = document.createElement('div'); meta.className = 'item-sub';
-    meta.textContent = result.provider === 'musixmatch' ? `${result.artist || 'Artist unavailable'} · MUSIXMATCH` : `HYMN ${result.number} · ${result.category}`;
+    meta.textContent = result.provider === 'lrclib' ? `${result.artist || 'Unknown artist'} · LRCLIB` : `HYMN ${result.number} · ${result.category}`;
     element.append(title, meta); element.onclick = () => openOnlineHymn(result); library.append(element);
   });
 }
@@ -364,23 +364,23 @@ function addItem(type) {
 async function openOnlineHymn(summary) {
   loadedOnlineHymn = null;
   $('#onlineHymnTitle').textContent = summary.title;
-  $('#onlineHymnMeta').textContent = summary.provider === 'musixmatch'
-    ? `${summary.artist || 'Unknown artist'} · Musixmatch`
+  $('#onlineHymnMeta').textContent = summary.provider === 'lrclib'
+    ? `${summary.artist || 'Unknown artist'} · LRCLIB`
     : `Hymn ${summary.number} · ${summary.category} · Gospel Hymns & Songs`;
   $('#onlineHymnLyrics').textContent = 'Loading lyrics…';
   $('#importOnlineHymn').disabled = true;
-  $('#onlineRightsNote').textContent = summary.provider === 'musixmatch'
-    ? 'Musixmatch lyric availability and reuse rights depend on your API plan and licence. Confirm that your account permits church projection and local storage before importing.'
+  $('#onlineRightsNote').textContent = summary.provider === 'lrclib'
+    ? 'LRCLIB is a community lyrics catalogue. Confirm that your church has permission to project or store these lyrics, or that the song is in the public domain.'
     : 'Before adding lyrics to your local library, confirm that your church has permission to use them or that they are in the public domain.';
   $('#onlineHymnDialog').showModal();
   try {
-    const hymn = summary.provider === 'musixmatch'
-      ? await window.churchflowDesktop.getMusixmatchLyrics(summary.id)
+    const hymn = summary.provider === 'lrclib'
+      ? await window.churchflowDesktop.getLrclibLyrics(summary.id)
       : await window.churchflowDesktop.getGospelHymn(summary.number);
     loadedOnlineHymn = { ...summary, ...hymn, title: summary.title || hymn.title, artist: summary.artist || '', sourceUrl: summary.sourceUrl || hymn.sourceUrl };
     $('#onlineHymnTitle').textContent = loadedOnlineHymn.title;
-    $('#onlineHymnMeta').textContent = summary.provider === 'musixmatch'
-      ? `${summary.artist || 'Unknown artist'} · Musixmatch${hymn.copyright ? ` · ${hymn.copyright}` : ''}`
+    $('#onlineHymnMeta').textContent = summary.provider === 'lrclib'
+      ? `${summary.artist || 'Unknown artist'} · LRCLIB`
       : `Hymn ${hymn.number} · ${hymn.category} · Gospel Hymns & Songs`;
     $('#onlineHymnLyrics').textContent = hymn.body || 'No lyric text was returned for this song.';
     $('#importOnlineHymn').disabled = !hymn.body;
@@ -394,13 +394,13 @@ async function searchOnline() {
   if (query.length < 2) { $('#onlineStatus').textContent = 'Enter at least two characters to search.'; return; }
   const provider = $('#lyricsProvider').value;
   $('#onlineSearchButton').disabled = true;
-  $('#onlineStatus').textContent = provider === 'musixmatch' ? 'Searching Musixmatch…' : 'Searching Gospel Hymns & Songs…';
+  $('#onlineStatus').textContent = provider === 'lrclib' ? 'Searching LRCLIB…' : 'Searching Gospel Hymns & Songs…';
   try {
-    onlineResults = provider === 'musixmatch'
-      ? await window.churchflowDesktop.searchMusixmatch(query)
+    onlineResults = provider === 'lrclib'
+      ? await window.churchflowDesktop.searchLrclib(query)
       : await window.churchflowDesktop.searchGospelHymns(query);
     $('#onlineStatus').textContent = onlineResults.length
-      ? `${onlineResults.length} results · ${provider === 'musixmatch' ? 'Musixmatch account and plan apply.' : 'Gospel Hymns & Songs catalogue; provider rate limits apply.'}`
+      ? `${onlineResults.length} results · ${provider === 'lrclib' ? 'Free LRCLIB catalogue; community coverage and rate limits apply.' : 'Gospel Hymns & Songs catalogue; provider rate limits apply.'}`
       : 'No matching songs found. Try fewer words or another spelling.';
     renderOnlineResults();
   } catch (error) {
@@ -485,27 +485,9 @@ $('#search').addEventListener('keydown', (event) => { if (event.key === 'Enter' 
 $('#onlineSearchButton').onclick = searchOnline;
 $('#lyricsProvider').onchange = () => {
   onlineResults = []; renderOnlineResults();
-  $('#onlineStatus').textContent = $('#lyricsProvider').value === 'musixmatch'
-    ? 'Musixmatch requires an API key and an account with suitable lyric access.'
-    : 'Search the Gospel Hymns & Songs catalogue.';
-};
-$('#configureLyricsKey').onclick = async () => {
-  $('#musixmatchApiKey').value = '';
-  try {
-    const hasKey = await window.churchflowDesktop.hasMusixmatchKey();
-    $('#musixmatchApiKey').placeholder = hasKey ? 'A key is already saved; enter a replacement' : 'Paste your provider API key';
-  } catch { /* the desktop key store may not be available in preview mode */ }
-  $('#lyricsKeyDialog').showModal();
-};
-$('#saveLyricsKey').onclick = async (event) => {
-  event.preventDefault();
-  const key = $('#musixmatchApiKey').value.trim();
-  if (!key) { alert('Paste your Musixmatch API key first.'); return; }
-  try {
-    await window.churchflowDesktop.setMusixmatchKey(key);
-    $('#lyricsKeyDialog').close(); $('#onlineStatus').textContent = 'Musixmatch API key saved securely on this Windows device.';
-    $('#musixmatchApiKey').value = '';
-  } catch (error) { alert(error.message || 'The API key could not be saved.'); }
+  $('#onlineStatus').textContent = $('#lyricsProvider').value === 'lrclib'
+    ? 'Search LRCLIB for community-submitted lyrics. No API key or account is required.'
+    : 'Search the Gospel Hymns & Songs online catalogue.';
 };
 
 document.querySelectorAll('.tab').forEach((button) => {
@@ -676,7 +658,7 @@ $('#closeOnlineHymn').onclick = () => $('#onlineHymnDialog').close();
 $('#cancelOnlineHymn').onclick = () => $('#onlineHymnDialog').close();
 $('#importOnlineHymn').onclick = () => {
   if (!loadedOnlineHymn?.body) return;
-  const providerName = loadedOnlineHymn.provider === 'musixmatch' ? 'Musixmatch' : 'Gospel Hymns & Songs';
+  const providerName = loadedOnlineHymn.provider === 'lrclib' ? 'LRCLIB' : 'Gospel Hymns & Songs';
   const accepted = confirm(`Only import and project these lyrics if your church's licence or public-domain status permits it. ${providerName} access alone does not necessarily grant offline storage or projection rights. Continue?`);
   if (!accepted) return;
   const id = `online-${Date.now()}`;
