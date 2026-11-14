@@ -457,6 +457,140 @@ ipcMain.handle('churchflow:get-lrc-red-lyrics', async (_event, trackIsrc) => {
   };
 });
 
+
+function cleanLyricsXml(value) {
+  return String(value || '')
+    .replace(/<br\\s*\\/?\\s*>/gi, '\\n')
+    .replace(/<\\/(?:lines|verse|p)>/gi, '\\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&#(\\d+);/g, (_m, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_m, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/[ \\t]+\\n/g, '\\n').replace(/\\n{3,}/g, '\\n\\n').trim();
+}
+
+function parseOpenLyricsXml(xml, originalName) {
+  const source = String(xml || '');
+  if (!/<song(?:\\s|>)/i.test(source) || !/<lyrics(?:\\s|>)/i.test(source)) return null;
+  const titlesBlock = source.match(/<titles?\\b[^>]*>([\\s\\S]*?)<\\/titles?>/i);
+  const titleMatch = titlesBlock?.[1]?.match(/<title\\b[^>]*>([\\s\\S]*?)<\\/title>/i);
+  const title = cleanLyricsXml(titleMatch?.[1]) || path.basename(originalName, path.extname(originalName));
+  const verses = [];
+  for (const match of source.matchAll(/<verse\\b[^>]*>([\\s\\S]*?)<\\/verse>/gi)) {
+    const verseSource = match[1];
+    const lineBlocks = [...verseSource.matchAll(/<lines\\b[^>]*>([\\s\\S]*?)<\\/lines>/gi)].map((line) => cleanLyricsXml(line[1]));
+    const text = (lineBlocks.length ? lineBlocks : [cleanLyricsXml(verseSource)]).filter(Boolean).join('\\n');
+    if (text) verses.push(text);
+  }
+  const body = verses.join('\\n---\\n').trim();
+  if (!body) return null;
+  const authorsBlock = source.match(/<authors?\\b[^>]*>([\\s\\S]*?)<\\/authors?>/i);
+  const author = authorsBlock ? cleanLyricsXml(authorsBlock[1].replace(/<\\/?author[^>]*>/gi, '')) : '';
+  return { title, body, author, originalName };
+}
+
+ipcMain.handle('churchflow:import-openlyrics', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Import OpenLyrics songs',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'OpenLyrics XML or ZIP collection', extensions: ['xml', 'zip'] }, { name: 'OpenLyrics XML', extensions: ['xml'] }, { name: 'ZIP collections', extensions: ['zip'] }]
+  });
+  if (result.canceled || !result.filePaths.length) return null;
+  const AdmZip = require('adm-zip');
+  const songs = [];
+  let skipped = 0;
+  const maxFiles = 500;
+  const maxBytes = 3 * 1024 * 1024;
+  const processXml = (buffer, name) => {
+    if (buffer.length > maxBytes) { skipped += 1; return; }
+    const song = parseOpenLyricsXml(buffer.toString('utf8'), name);
+    if (song) songs.push(song); else skipped += 1;
+  };
+  for (const filePath of result.filePaths) {
+    const extension = path.extname(filePath).toLowerCase();
+    if (extension === '.xml') {
+      processXml(await fsp.readFile(filePath), path.basename(filePath));
+    } else if (extension === '.zip') {
+      const zip = new AdmZip(filePath);
+      for (const entry of zip.getEntries()) {
+        if (songs.length + skipped >= maxFiles) break;
+        if (entry.isDirectory || !/\\.xml$/i.test(entry.entryName) || entry.header.size > maxBytes) { if (!entry.isDirectory && /\\.xml$/i.test(entry.entryName)) skipped += 1; continue; }
+        processXml(entry.getData(), path.basename(entry.entryName));
+      }
+    }
+    if (songs.length + skipped >= maxFiles) break;
+  }
+  return { songs, skipped };
+});
+
+ipcMain.handle('churchflow:search-lyrics-ovh', async (_event, query) => {
+  const q = String(query || '').trim();
+  if (q.length < 2 || q.length > 100) throw new Error('Enter between 2 and 100 characters to search.');
+  const response = await fetch(`https://api.lyrics.ovh/suggest/${encodeURIComponent(q)}`, { signal: AbortSignal.timeout(16000) });
+  if (!response.ok) throw new Error(`Lyrics.ovh returned HTTP ${response.status}.`);
+  const payload = await response.json();
+  if (!Array.isArray(payload?.data)) throw new Error('Lyrics.ovh returned an unexpected search response.');
+  return payload.data.slice(0, 20).map((track) => ({
+    id: String(track.id || ''), title: String(track.title || 'Untitled track'),
+    artist: String(track.artist?.name || 'Unknown artist'), album: String(track.album?.title || ''),
+    duration: Number(track.duration || 0), source: 'Lyrics.ovh', provider: 'lyrics-ovh',
+    sourceUrl: 'https://lyrics.ovh/'
+  }));
+});
+
+ipcMain.handle('churchflow:get-lyrics-ovh', async (_event, artist, title) => {
+  const safeArtist = String(artist || '').trim().slice(0, 160);
+  const safeTitle = String(title || '').trim().slice(0, 160);
+  if (!safeArtist || !safeTitle) throw new Error('The song title or artist is missing.');
+  const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(safeArtist)}/${encodeURIComponent(safeTitle)}`;
+  const response = await fetch(url, { signal: AbortSignal.timeout(18000) });
+  if (response.status === 404) throw new Error('Lyrics.ovh has no lyrics for this track.');
+  if (!response.ok) throw new Error(`Lyrics.ovh returned HTTP ${response.status}.`);
+  const payload = await response.json();
+  if (typeof payload?.lyrics !== 'string' || !payload.lyrics.trim()) throw new Error('Lyrics.ovh returned no lyric text.');
+  return { title: safeTitle, artist: safeArtist, body: payload.lyrics.trim(), source: 'Lyrics.ovh', provider: 'lyrics-ovh', sourceUrl: 'https://lyrics.ovh/' };
+});
+
+function ttmlToText(ttml) {
+  const xml = String(ttml || '');
+  const paragraphs = [...xml.matchAll(/<p\\b[^>]*>([\\s\\S]*?)<[/]p>/gi)].map((match) =>
+    cleanLyricsXml(match[1].replace(/<span\\b[^>]*>/gi, '').replace(/<\\/span>/gi, ''))
+  ).filter(Boolean);
+  return paragraphs.join('\\n').trim();
+}
+
+async function fetchBetterLyrics(track) {
+  const title = String(track?.title || '').trim().slice(0, 160);
+  const artist = String(track?.artist || '').trim().slice(0, 160);
+  const album = String(track?.album || '').trim().slice(0, 160);
+  const duration = Math.max(0, Math.min(86400, Math.round(Number(track?.duration) || 0)));
+  if (!title || !artist) return null;
+  const url = new URL('https://api.betterlyrics.org/getLyrics');
+  url.search = new URLSearchParams({ s: title, a: artist, al: album, d: String(duration) }).toString();
+  const response = await fetch(url, { signal: AbortSignal.timeout(12000) });
+  if (!response.ok) return null; // No-key mode is cache-first; uncached tracks may require a key.
+  const payload = await response.json();
+  const body = ttmlToText(payload.ttml);
+  if (!body) return null;
+  return { id: `better-${title}-${artist}`, title, artist, album, duration, body, ttml: payload.ttml, score: payload.score, source: 'Better Lyrics', provider: 'better-lyrics', sourceUrl: 'https://betterlyrics.org/' };
+}
+
+ipcMain.handle('churchflow:search-better-lyrics', async (_event, tracks) => {
+  if (!Array.isArray(tracks)) return [];
+  const candidates = tracks.slice(0, 10);
+  const settled = await Promise.allSettled(candidates.map(fetchBetterLyrics));
+  const results = [];
+  for (const item of settled) if (item.status === 'fulfilled' && item.value) results.push(item.value);
+  return results;
+});
+
+ipcMain.handle('churchflow:get-better-lyrics', async (_event, track) => {
+  const result = await fetchBetterLyrics(track);
+  if (!result) throw new Error('Better Lyrics has no cached result for this song. Uncached lookups may require an API key, which is not currently available without a key.');
+  return result;
+});
+
 ipcMain.handle('churchflow:pdfjs-paths', () => ({
   moduleUrl: pathToFileURL(require.resolve('pdfjs-dist/build/pdf.mjs')).toString(),
   workerUrl: pathToFileURL(require.resolve('pdfjs-dist/build/pdf.worker.mjs')).toString()

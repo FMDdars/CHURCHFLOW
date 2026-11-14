@@ -123,14 +123,14 @@ function renderOnlineResults() {
   const library = $('#libraryList'); library.innerHTML = '';
   if (!onlineResults.length) {
     const hint = document.createElement('p'); hint.className = 'empty-library';
-    hint.textContent = 'Search the selected lyrics provider. Your saved local songs remain available offline.';
+    hint.textContent = 'Search all online lyrics sources at once. Your saved songs and imported OpenLyrics collection remain available offline.';
     library.append(hint); return;
   }
   onlineResults.forEach((result) => {
     const element = document.createElement('button'); element.type = 'button'; element.className = 'library-item online-result';
     const title = document.createElement('div'); title.className = 'item-title'; title.textContent = result.title;
     const meta = document.createElement('div'); meta.className = 'item-sub';
-    meta.textContent = result.provider === 'lrclib' ? `${result.artist || 'Unknown artist'} · LRCLIB` : result.provider === 'lrc-red' ? `${result.artist || 'Unknown artist'} · lrc.red` : `HYMN ${result.number} · ${result.category}`;
+    meta.textContent = result.provider === 'gospel-hymns' ? `HYMN ${result.number} · ${result.category} · Gospel Hymns & Songs` : `${result.artist || 'Unknown artist'} · ${result.source || result.provider}`;
     element.append(title, meta); element.onclick = () => openOnlineHymn(result); library.append(element);
   });
 }
@@ -364,27 +364,31 @@ function addItem(type) {
 async function openOnlineHymn(summary) {
   loadedOnlineHymn = null;
   $('#onlineHymnTitle').textContent = summary.title;
-  const providerLabel = summary.provider === 'lrclib' ? 'LRCLIB' : summary.provider === 'lrc-red' ? 'lrc.red' : 'Gospel Hymns & Songs';
+  const providerLabel = summary.source || (summary.provider === 'lrclib' ? 'LRCLIB' : summary.provider === 'lrc-red' ? 'lrc.red' : summary.provider === 'lyrics-ovh' ? 'Lyrics.ovh' : summary.provider === 'better-lyrics' ? 'Better Lyrics' : summary.provider === 'local' ? 'OpenLyrics / Local library' : 'Gospel Hymns & Songs');
   $('#onlineHymnMeta').textContent = summary.provider === 'gospel-hymns'
     ? `Hymn ${summary.number} · ${summary.category} · ${providerLabel}`
     : `${summary.artist || 'Unknown artist'} · ${providerLabel}`;
   const sourceLink = $('#onlineSourceLink');
-  sourceLink.href = summary.sourceUrl || (summary.provider === 'lrc-red' ? 'https://lrc.red/' : summary.provider === 'lrclib' ? 'https://lrclib.net/' : 'https://gospel-hymns.onrender.com/');
+  sourceLink.href = summary.sourceUrl || (summary.provider === 'lrc-red' ? 'https://lrc.red/' : summary.provider === 'lrclib' ? 'https://lrclib.net/' : summary.provider === 'lyrics-ovh' ? 'https://lyrics.ovh/' : summary.provider === 'better-lyrics' ? 'https://betterlyrics.org/' : summary.provider === 'local' ? 'https://docs.openlyrics.org/' : 'https://gospel-hymns.onrender.com/');
   sourceLink.textContent = `Lyrics source: ${providerLabel}`;
   $('#onlineHymnLyrics').textContent = 'Loading lyrics…';
   $('#importOnlineHymn').disabled = true;
-  $('#onlineRightsNote').textContent = summary.provider === 'lrclib'
-    ? 'LRCLIB is a community lyrics catalogue. Confirm that your church has permission to project or store these lyrics, or that the song is in the public domain.'
-    : summary.provider === 'lrc-red'
-      ? 'lrc.red provides synced lyrics. Confirm that your church has permission to project or store these lyrics, or that the song is in the public domain.'
-      : 'Before adding lyrics to your local library, confirm that your church has permission to use them or that they are in the public domain.';
+  $('#onlineRightsNote').textContent = summary.provider === 'local'
+    ? 'This song is already saved in your local library.'
+    : 'Before adding lyrics to your local library, confirm that your church has permission to project or store them, or that the song is in the public domain. API access does not grant lyric rights.';
   $('#onlineHymnDialog').showModal();
   try {
-    const hymn = summary.provider === 'lrclib'
-      ? await window.churchflowDesktop.getLrclibLyrics(summary.id)
-      : summary.provider === 'lrc-red'
-        ? await window.churchflowDesktop.getLrcRedLyrics(summary.isrc || summary.id)
-        : await window.churchflowDesktop.getGospelHymn(summary.number);
+    const hymn = summary.provider === 'local'
+      ? { ...summary, body: summary.body }
+      : summary.provider === 'lrclib'
+        ? await window.churchflowDesktop.getLrclibLyrics(summary.id)
+        : summary.provider === 'lrc-red'
+          ? await window.churchflowDesktop.getLrcRedLyrics(summary.isrc || summary.id)
+          : summary.provider === 'lyrics-ovh'
+            ? await window.churchflowDesktop.getLyricsOvhLyrics(summary.artist, summary.title)
+            : summary.provider === 'better-lyrics'
+              ? await window.churchflowDesktop.getBetterLyrics(summary)
+              : await window.churchflowDesktop.getGospelHymn(summary.number);
     loadedOnlineHymn = { ...summary, ...hymn, title: summary.title || hymn.title, artist: summary.artist || '', sourceUrl: summary.sourceUrl || hymn.sourceUrl };
     $('#onlineHymnTitle').textContent = loadedOnlineHymn.title;
     $('#onlineHymnMeta').textContent = summary.provider === 'gospel-hymns'
@@ -400,29 +404,69 @@ async function openOnlineHymn(summary) {
 async function searchOnline() {
   const query = $('#search').value.trim();
   if (query.length < 2) { $('#onlineStatus').textContent = 'Enter at least two characters to search.'; return; }
-  const provider = $('#lyricsProvider').value;
   $('#onlineSearchButton').disabled = true;
-  $('#onlineStatus').textContent = provider === 'lrclib' ? 'Searching LRCLIB…' : provider === 'lrc-red' ? 'Searching lrc.red…' : 'Searching Gospel Hymns & Songs…';
+  $('#onlineStatus').textContent = 'Searching Gospel Hymns & Songs, LRCLIB, lrc.red, Lyrics.ovh and cached Better Lyrics results…';
   try {
-    onlineResults = provider === 'lrclib'
-      ? await window.churchflowDesktop.searchLrclib(query)
-      : provider === 'lrc-red'
-        ? await window.churchflowDesktop.searchLrcRed(query)
-        : await window.churchflowDesktop.searchGospelHymns(query);
-    const providerDescription = provider === 'lrclib'
-      ? 'Free LRCLIB catalogue; community coverage and rate limits apply.'
-      : provider === 'lrc-red'
-        ? 'Free lrc.red catalogue; synced lyrics where available.'
-        : 'Gospel Hymns & Songs catalogue; provider rate limits apply.';
-    $('#onlineStatus').textContent = onlineResults.length
-      ? `${onlineResults.length} results · ${providerDescription}`
-      : 'No matching songs found. Try fewer words or another spelling.';
+    const settled = await Promise.allSettled([
+      window.churchflowDesktop.searchGospelHymns(query),
+      window.churchflowDesktop.searchLrclib(query),
+      window.churchflowDesktop.searchLrcRed(query),
+      window.churchflowDesktop.searchLyricsOvh(query)
+    ]);
+    const names = ['Gospel Hymns & Songs', 'LRCLIB', 'lrc.red', 'Lyrics.ovh'];
+    const results = [];
+    const sourceStatus = [];
+    settled.forEach((entry, index) => {
+      if (entry.status === 'fulfilled') {
+        results.push(...(Array.isArray(entry.value) ? entry.value : []));
+        sourceStatus.push(`${names[index]}: ${entry.value?.length || 0}`);
+      } else sourceStatus.push(`${names[index]}: unavailable`);
+    });
+    const localMatches = data.items.filter((item) => item.type === 'song')
+      .map((item) => ({ item, score: searchScore(item, query) }))
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score).slice(0, 20)
+      .map(({ item }) => ({ id: item.id, title: item.title, artist: 'Saved on this computer', body: item.body, source: item.source || 'Local library', provider: 'local', sourceUrl: 'https://docs.openlyrics.org/' }));
+    results.push(...localMatches);
+    const betterCandidates = results.filter((item) => item.provider !== 'local' && item.provider !== 'gospel-hymns')
+      .slice(0, 10).map((item) => ({ title: item.title, artist: item.artist || '', album: item.album || '', duration: Number(item.duration || 0) }));
+    if (betterCandidates.length) {
+      try {
+        const better = await window.churchflowDesktop.searchBetterLyrics(betterCandidates);
+        results.push(...better);
+        sourceStatus.push(`Better Lyrics cached: ${better.length}`);
+      } catch { sourceStatus.push('Better Lyrics: unavailable'); }
+    }
+    onlineResults = results;
+    $('#onlineStatus').textContent = `${results.length} matches across sources · ${sourceStatus.join(' · ')}. Choose a result to preview its lyrics.`;
     renderOnlineResults();
   } catch (error) {
     onlineResults = [];
-    $('#onlineStatus').textContent = error.message || 'The online lyrics service could not be reached.';
+    $('#onlineStatus').textContent = error.message || 'The online lyrics services could not be reached.';
     renderOnlineResults();
   } finally { $('#onlineSearchButton').disabled = false; }
+}
+
+async function importOpenLyrics() {
+  if (!window.churchflowDesktop?.importOpenLyrics) { alert('OpenLyrics import requires the ChurchFlow desktop application.'); return; }
+  $('#onlineStatus').textContent = 'Choose OpenLyrics XML files or a ZIP collection…';
+  try {
+    const result = await window.churchflowDesktop.importOpenLyrics();
+    if (!result?.songs?.length) { $('#onlineStatus').textContent = 'No OpenLyrics songs were imported.'; return; }
+    let added = 0;
+    for (const song of result.songs) {
+      const duplicate = data.items.some((item) => item.type === 'song' && normalize(item.title) === normalize(song.title) && normalize(item.body) === normalize(song.body));
+      if (duplicate) continue;
+      const id = `openlyrics-${Date.now()}-${added}`;
+      data.items.push({ id, type: 'song', title: song.title, body: song.body, source: 'OpenLyrics import', originalName: song.originalName });
+      added += 1;
+    }
+    save();
+    $('#onlineStatus').textContent = `Imported ${added} OpenLyrics song${added === 1 ? '' : 's'} into your offline library${result.skipped ? ` · ${result.skipped} unsupported or empty files skipped` : ''}.`;
+    renderOnlineResults();
+  } catch (error) {
+    $('#onlineStatus').textContent = error.message || 'OpenLyrics import failed.';
+  }
 }
 
 async function importPowerPoint() {
@@ -498,12 +542,7 @@ async function stopNdi() {
 $('#search').addEventListener('input', () => { if (tab !== 'online') renderLibrary(); });
 $('#search').addEventListener('keydown', (event) => { if (event.key === 'Enter' && tab === 'online') searchOnline(); });
 $('#onlineSearchButton').onclick = searchOnline;
-$('#lyricsProvider').onchange = () => {
-  onlineResults = []; renderOnlineResults();
-  $('#onlineStatus').textContent = $('#lyricsProvider').value === 'lrclib'
-    ? 'Search LRCLIB for community-submitted lyrics. No API key or account is required.'
-    : 'Search the Gospel Hymns & Songs online catalogue.';
-};
+$('#importOpenLyrics').onclick = importOpenLyrics;
 
 document.querySelectorAll('.tab').forEach((button) => {
   button.onclick = () => {
@@ -673,11 +712,11 @@ $('#closeOnlineHymn').onclick = () => $('#onlineHymnDialog').close();
 $('#cancelOnlineHymn').onclick = () => $('#onlineHymnDialog').close();
 $('#importOnlineHymn').onclick = () => {
   if (!loadedOnlineHymn?.body) return;
-  const providerName = loadedOnlineHymn.provider === 'lrclib' ? 'LRCLIB' : 'Gospel Hymns & Songs';
+  const providerName = loadedOnlineHymn.source || 'lyrics provider';
   const accepted = confirm(`Only import and project these lyrics if your church's licence or public-domain status permits it. ${providerName} access alone does not necessarily grant offline storage or projection rights. Continue?`);
   if (!accepted) return;
   const id = `online-${Date.now()}`;
-  data.items.push({ id, type: 'song', title: loadedOnlineHymn.title, body: loadedOnlineHymn.body, source: loadedOnlineHymn.source, sourceUrl: loadedOnlineHymn.sourceUrl, lyricRightsConfirmed: true });
+  data.items.push({ id, type: 'song', title: loadedOnlineHymn.title, body: loadedOnlineHymn.body, source: loadedOnlineHymn.source || providerName, sourceUrl: loadedOnlineHymn.sourceUrl, lyricRightsConfirmed: true });
   data.service.push(id); selected = id; slideIndex = 0; tab = 'songs';
   $('#onlineHymnDialog').close();
   document.querySelectorAll('.tab').forEach((button) => button.classList.toggle('active', button.dataset.tab === tab));
