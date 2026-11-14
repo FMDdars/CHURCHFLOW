@@ -33,7 +33,7 @@ for (const id of new Set(appSelectors)) {
 
 try {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  if (!/^0\\.9\\.\\d+$/.test(pkg.version)) problems.push(`Expected a 0.9.x release version, found ${pkg.version}`);
+  if (!/^0\.9\.\d+$/.test(pkg.version)) problems.push(`Expected a 0.9.x release version, found ${pkg.version}`);
   if (!pkg.scripts?.['dist:win']) problems.push('Missing dist:win build script.');
   if (pkg.devDependencies?.electron !== '45.2.3') problems.push('Electron must remain pinned to the v0.7 tested release.');
   if (pkg.engines?.node !== '>=24.0.0 <27') problems.push('Node.js engine range must allow supported major versions 24 through 26.');
