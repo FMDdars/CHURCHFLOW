@@ -646,6 +646,7 @@ $('#restoreLive').onclick = async () => { liveBlank = false; render(); await sen
 $('#openDisplay').onclick = openDisplay;
 $('#openAnother').onclick = openDisplay;
 $('#openCapture').onclick = openDisplay;
+$('#ndiAccess').onclick = () => $('#ndiCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
 $('#outputMode').value = data.outputMode === 'lower-third' ? 'lower-third' : 'full';
 $('#outputMode').onchange = async () => {
