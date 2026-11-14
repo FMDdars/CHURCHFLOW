@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>ChurchFlow Audience Display</title>
   <style>
-    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050914;color:#fff;font-family:Arial, sans-serif}
-    body{display:grid;place-items:center;background-image:radial-gradient(circle at 70% 20%,#263a65,#050914 65%)}
-    main{padding:5vw;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
-    small{letter-spacing:.35em;color:#9fb2ff;font-size:clamp(10px,1vw,18px)}h1{font-size:clamp(32px,5vw,88px);margin:3vh 0}
-    p{font-size:clamp(22px,3vw,54px);line-height:1.35;white-space:pre-wrap;margin:0;max-width:90vw}
-    img{display:block;width:100vw;height:100vh;object-fit:contain;background:#050914}
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent!important;color:#fff;font-family:Arial,sans-serif}
+    body{display:block}
+    main{padding:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;text-align:left;background:transparent}
+    p{font-size:clamp(22px,3vw,54px);line-height:1.25;white-space:pre-wrap;margin:0;max-width:100vw}
+    img{display:block;width:100vw;height:100vh;object-fit:contain;background:transparent}
   </style>
 </head>
 <body>
-  <main id="screen"><small>CHURCHFLOW</small><h1>ChurchFlow</h1><p>Waiting for live content…</p></main>
+  <main id="screen"></main>
   <script>
     addEventListener('message', (event) => {
       const data = event.data || {};
@@ -39,10 +39,8 @@
       const item = data.item;
       const slides = (item?.body || '').split(/\n---\n/g).map((part) => part.trim()).filter(Boolean);
       main.innerHTML = '';
-      const eyebrow = document.createElement('small'); eyebrow.textContent = 'CHURCHFLOW';
-      const heading = document.createElement('h1'); heading.textContent = item?.title || 'ChurchFlow';
       const paragraph = document.createElement('p'); paragraph.textContent = slides[data.index] || '';
-      main.append(eyebrow, heading, paragraph);
+      main.append(paragraph);
     });
   </script>
 </body>
