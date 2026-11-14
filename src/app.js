@@ -223,7 +223,7 @@ function render() {
   renderLibrary(); renderService();
   const item = current(); const count = item ? slides(item).length : 0;
   $('#slideCounter').textContent = `Slide ${item ? slideIndex + 1 : 0} of ${count}`;
-  $('#presenterViewButton').hidden = item?.type !== 'presentation';
+  $('#presenterViewButton').hidden = item?.type !== 'presentation' && liveItem?.type !== 'presentation';
   paint($('#preview'), item, slideIndex);
   paint($('#livePreview'), liveItem, liveIndex, liveBlank);
   if ($('#presenterDialog').open) updatePresenterView().catch(console.error);
@@ -406,24 +406,26 @@ async function importPowerPoint() {
 
 async function updatePresenterView() {
   const selectedItem = current();
-  if (selectedItem?.type !== 'presentation') return;
-  // When the selected presentation is already live, Presenter View follows the
-  // exact live snapshot and index instead of the operator's unsent preview.
-  const isLivePresentation = liveItem?.type === 'presentation' && liveItem.id === selectedItem.id;
+  // Presenter View always follows an active live PowerPoint, even if the
+  // operator selects another library item while the audience presentation runs.
+  const isLivePresentation = liveItem?.type === 'presentation';
   const item = isLivePresentation ? liveItem : selectedItem;
+  if (item?.type !== 'presentation') return;
   const pdf = await getPresentationDoc(item);
   const count = pdf.numPages;
   const activeIndex = isLivePresentation ? liveIndex : slideIndex;
-  slideIndex = Math.max(0, Math.min(activeIndex, count - 1));
-  if (isLivePresentation) liveIndex = slideIndex;
+  const boundedIndex = Math.max(0, Math.min(activeIndex, count - 1));
+  if (isLivePresentation) liveIndex = boundedIndex;
+  else slideIndex = boundedIndex;
   const currentCanvas = $('#presenterCurrent'); const nextCanvas = $('#presenterNextCanvas');
-  await renderPdfPageToCanvas(item, slideIndex, currentCanvas, currentCanvas.clientWidth || 760, 480);
-  const nextIndex = slideIndex + 1;
+  const presenterIndex = isLivePresentation ? liveIndex : slideIndex;
+  await renderPdfPageToCanvas(item, presenterIndex, currentCanvas, currentCanvas.clientWidth || 760, 480);
+  const nextIndex = presenterIndex + 1;
   if (nextIndex < count) await renderPdfPageToCanvas(item, nextIndex, nextCanvas, nextCanvas.clientWidth || 380, 240);
   else { const ctx = nextCanvas.getContext('2d'); nextCanvas.width = 760; nextCanvas.height = 428; ctx.fillStyle = '#050914'; ctx.fillRect(0, 0, 760, 428); ctx.fillStyle = '#aab5c8'; ctx.font = '24px Arial'; ctx.textAlign = 'center'; ctx.fillText('End of presentation', 380, 218); }
   const liveLabel = isLivePresentation ? ' · LIVE OUTPUT' : ' · PREVIEW — NOT LIVE';
-  $('#presenterStatus').textContent = `Slide ${slideIndex + 1} of ${count} · ${item.originalName || item.title}${liveLabel}`;
-  $('#presenterNotes').textContent = item.notes?.[String(slideIndex)] || 'No speaker notes were found for this slide.';
+  $('#presenterStatus').textContent = `Slide ${presenterIndex + 1} of ${count} · ${item.originalName || item.title}${liveLabel}`;
+  $('#presenterNotes').textContent = item.notes?.[String(presenterIndex)] || 'No speaker notes were found for this slide.';
 }
 
 async function startNdi() {
@@ -560,9 +562,9 @@ async function sendSelectedPresentationLive() {
 }
 
 $('#presenterViewButton').onclick = async () => {
-  const item = current();
+  const item = liveItem?.type === 'presentation' ? liveItem : current();
   if (item?.type !== 'presentation') return;
-  if (liveItem?.type === 'presentation' && liveItem.id === item.id) slideIndex = liveIndex;
+  if (item === current() || item.id === current()?.id) slideIndex = liveIndex;
   $('#presenterDialog').showModal();
   try {
     // Opening Presenter View is read-only: it must never change audience output.
@@ -571,12 +573,12 @@ $('#presenterViewButton').onclick = async () => {
 };
 $('#closePresenter').onclick = () => $('#presenterDialog').close();
 async function movePresenterSlide(direction) {
-  const item = current();
+  const isLivePresentation = liveItem?.type === 'presentation';
+  const item = isLivePresentation ? liveItem : current();
   if (item?.type !== 'presentation') return;
-  const isLivePresentation = liveItem?.type === 'presentation' && liveItem.id === item.id;
   if (isLivePresentation) {
     liveIndex = Math.max(0, Math.min(slides(liveItem).length - 1, liveIndex + direction));
-    slideIndex = liveIndex;
+    if (current()?.id === liveItem.id) slideIndex = liveIndex;
   } else {
     slideIndex = Math.max(0, Math.min(slides(item).length - 1, slideIndex + direction));
   }
