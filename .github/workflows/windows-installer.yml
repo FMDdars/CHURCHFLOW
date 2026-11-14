@@ -33,6 +33,16 @@ jobs:
           git tag "v0.9.${{ github.run_number }}"
           git push origin "v0.9.${{ github.run_number }}"
 
+      - name: Create one GitHub release before uploading assets
+        shell: bash
+        run: |
+          gh release create "v0.9.${{ github.run_number }}" \
+            --verify-tag \
+            --title "ChurchFlow 0.9.${{ github.run_number }}" \
+            --notes "ChurchFlow Windows release with automatic in-app updates."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Check project files and JavaScript syntax
         run: npm run check
 
