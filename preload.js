@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('churchflowDesktop', Object.freeze({
   importOpenLyrics: () => ipcRenderer.invoke('churchflow:import-openlyrics'),
   getPdfJsPaths: () => ipcRenderer.invoke('churchflow:pdfjs-paths'),
   importPresentation: () => ipcRenderer.invoke('churchflow:import-presentation'),
+  importBackground: () => ipcRenderer.invoke('churchflow:import-background'),
   getPresentationPdf: (presentationId) => ipcRenderer.invoke('churchflow:get-presentation-pdf', presentationId),
   deletePresentation: (presentationId) => ipcRenderer.invoke('churchflow:delete-presentation', presentationId),
   ndiStart: (settings) => ipcRenderer.invoke('churchflow:ndi-start', settings),
