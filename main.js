@@ -107,6 +107,29 @@ function safeId(value) {
 function importRoot() {
   return path.join(app.getPath('userData'), 'imports');
 }
+function backgroundRoot() {
+  return path.join(app.getPath('userData'), 'backgrounds');
+}
+async function importBackground() {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Choose a background image or video',
+    properties: ['openFile'],
+    filters: [{ name: 'Images and videos', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'mp4', 'webm'] }]
+  });
+  if (result.canceled || !result.filePaths.length) return null;
+  const source = result.filePaths[0];
+  const extension = path.extname(source).toLowerCase();
+  const imageTypes = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
+  const videoTypes = ['.mp4', '.webm'];
+  if (![...imageTypes, ...videoTypes].includes(extension)) throw new Error('Choose a PNG, JPG, WEBP, GIF, MP4 or WEBM file.');
+  const stat = await fsp.stat(source);
+  if (stat.size > 300 * 1024 * 1024) throw new Error('The selected background is larger than 300 MB.');
+  const directory = backgroundRoot();
+  await fsp.mkdir(directory, { recursive: true });
+  const target = path.join(directory, `${crypto.randomUUID()}${extension}`);
+  await fsp.copyFile(source, target);
+  return { name: path.basename(source), type: videoTypes.includes(extension) ? 'video' : 'image', url: pathToFileURL(target).toString() };
+}
 
 function findLibreOffice() {
   const candidates = process.platform === 'win32'
@@ -596,6 +619,7 @@ ipcMain.handle('churchflow:pdfjs-paths', () => ({
   workerUrl: pathToFileURL(require.resolve('pdfjs-dist/build/pdf.worker.mjs')).toString()
 }));
 ipcMain.handle('churchflow:import-presentation', async () => importPresentation());
+ipcMain.handle('churchflow:import-background', async () => importBackground());
 ipcMain.handle('churchflow:get-presentation-pdf', async (_event, presentationId) => {
   const id = safeId(presentationId);
   const pdfPath = path.join(importRoot(), id, 'slides.pdf');
