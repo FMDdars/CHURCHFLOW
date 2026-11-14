@@ -7,7 +7,7 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const requiredFiles = [
   'index.html', 'display.html', 'manifest.webmanifest', 'main.js', 'preload.js',
-  'src/app.js', 'src/styles.css', 'assets/churchflow.ico',
+  'src/app.js', 'src/styles.css', 'assets/churchflow.ico', 'assets/churchflow-logo.jpg',
   'native/ndi/binding.gyp', 'native/ndi/ndi_sender.cpp',
   '.github/workflows/windows-installer.yml'
 ];
