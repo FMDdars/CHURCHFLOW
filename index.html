@@ -20,7 +20,7 @@
       <div class="search-row"><input id="search" class="search" placeholder="Search songs and slides…" /><button id="onlineSearchButton" class="btn btn-primary" hidden>Search</button></div><div id="onlineProviderTools" class="provider-tools" hidden><span class="muted">Searching all connected lyrics sources automatically</span><button id="importOpenLyrics" class="btn btn-subtle" type="button">＋ Import OpenLyrics XML / ZIP</button></div>
       <p id="onlineStatus" class="online-status" hidden>Search an online hymn catalogue. Internet access is required.</p>
       <div id="libraryList" class="library-list"></div>
-      <div id="libraryFooter" class="library-footer"><button id="addSlide" class="btn btn-subtle full">＋ New announcement slide</button><button id="importPowerPointLibrary" class="btn btn-subtle full">＋ Import PowerPoint / PDF</button></div>
+      <div id="libraryFooter" class="library-footer"><button id="editSelectedSong" class="btn btn-subtle full" hidden>✎ Edit selected song</button><button id="addSlide" class="btn btn-subtle full">＋ New announcement slide</button><button id="importPowerPointLibrary" class="btn btn-subtle full">＋ Import PowerPoint / PDF</button></div>
     </aside>
     <section class="center panel">
       <div class="panel-heading"><div><h2>Service order</h2><p class="muted">Arrange what happens during the service</p></div><button id="newService" class="btn btn-subtle">New service</button></div>
@@ -50,8 +50,17 @@
           <pre id="diagnosticsOutput" class="diagnostics-output" aria-live="polite">System checks have not been run yet.</pre>
         </div>
         <div class="output-card">
+          <div class="output-title"><strong>Custom background</strong><span class="state-pill ready">Image / video</span></div>
+          <p class="muted">Choose an image or video to appear behind full-screen lyrics.</p>
+          <button id="chooseBackground" class="btn btn-subtle full" type="button">＋ Upload background</button>
+          <button id="removeBackground" class="btn btn-subtle full" type="button" hidden>Remove background</button>
+          <p id="backgroundStatus" class="muted">No custom background selected.</p>
+        </div>
+        <div class="output-card">
           <div class="output-title"><strong>Output layout</strong><span class="state-pill ready">Alpha output</span></div>
           <label class="compact-label">Lyrics display mode<select id="outputMode"><option value="full">Full-screen lyrics</option><option value="lower-third">Transparent lower thirds</option></select></label>
+          <label class="compact-label">Lines per lyric slide<select id="lyricsLinesPerSlide"><option value="1">1 line</option><option value="2">2 lines</option><option value="3">3 lines</option><option value="4" selected>4 lines</option><option value="5">5 lines</option><option value="6">6 lines</option><option value="7">7 lines</option><option value="8">8 lines</option></select></label>
+          <p class="muted">Choose how many wrapped lyric lines appear on each slide. This applies to full-screen and lower-thirds lyrics.</p>
           <p class="muted">Lower-thirds mode places song lyrics along the bottom on a transparent canvas. Announcements and PowerPoint slides remain full-screen. For vMix transparency, use NDI when the optional NDI module is built; ordinary desktop capture may flatten the alpha channel.</p>
         </div>
         <div class="output-card">
@@ -91,6 +100,7 @@
     <p id="onlineRightsNote" class="rights-note">Before adding lyrics to your local library, confirm that your church has the required permission or that the song is in the public domain. The provider does not automatically grant projection or offline storage rights.</p>
     <div class="dialog-actions"><button id="cancelOnlineHymn" class="btn btn-subtle" type="button">Close</button><button id="importOnlineHymn" class="btn btn-primary" type="button" disabled>Add to my library</button></div>
   </dialog>
+  <video id="backgroundVideo" muted loop playsinline hidden></video>
   <script src="src/app.js"></script>
 </body>
 </html>
