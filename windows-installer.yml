@@ -1,0 +1,51 @@
+name: Build ChurchFlow for Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out ChurchFlow
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install project dependencies
+        run: npm install
+
+      - name: Check project files and JavaScript syntax
+        run: npm run check
+
+      - name: Build Windows installer and portable app
+        if: !startsWith(github.ref, 'refs/tags/')
+        run: npm run dist:win
+
+      - name: Build and publish GitHub Release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        run: npm run dist:win:publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows build files
+        if: always() && !startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChurchFlow-Windows-x64-v0.8.0
+          path: |
+            dist/ChurchFlow-Setup-0.8.0-x64.exe
+            dist/ChurchFlow-Portable-0.8.0-x64.exe
+          if-no-files-found: error
+          retention-days: 30
