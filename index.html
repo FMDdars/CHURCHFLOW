@@ -34,20 +34,11 @@
       <div class="panel-heading"><h2>Live control</h2><span class="live-dot">● READY</span></div>
       <div id="livePreview" class="live-screen"><div><span class="eyebrow">LIVE OUTPUT</span><h2>ChurchFlow</h2><p>Your presentation starts here.</p></div></div>
       <div class="live-buttons"><button id="goLive" class="btn btn-primary">Go live</button><button id="blackout" class="btn btn-danger">Black screen</button></div>
+      <div class="ndi-shortcut"><button id="ndiAccess" class="btn btn-subtle full" type="button">NDI OUTPUT SETTINGS · SDK REQUIRED</button></div>
       <div class="control-section"><h3>Display windows</h3><p class="muted">Open a separate output window for each connected screen. Your computer and graphics hardware determine the number of simultaneous displays.</p><button id="openAnother" class="btn btn-subtle full">＋ Open another display</button></div>
       <div class="control-section"><h3>Quick controls</h3><div class="quick-grid"><button id="livePrev" class="btn btn-subtle">Previous</button><button id="liveNext" class="btn btn-subtle">Next</button><button id="clearLive" class="btn btn-subtle">Clear output</button><button id="restoreLive" class="btn btn-subtle">Restore output</button></div></div>
       <div class="control-section">
         <h3>Broadcast output</h3>
-        <div class="output-card">
-          <div class="output-title"><strong>Output layout</strong><span class="state-pill ready">Alpha output</span></div>
-          <label class="compact-label">Lyrics display mode<select id="outputMode"><option value="full">Full-screen lyrics</option><option value="lower-third">Transparent lower thirds</option></select></label>
-          <p class="muted">Lower-thirds mode places song lyrics along the bottom on a transparent canvas. Announcements and PowerPoint slides remain full-screen. For vMix transparency, use NDI when the optional NDI module is built; ordinary desktop capture may flatten the alpha channel.</p>
-        </div>
-        <div class="output-card">
-          <div class="output-title"><strong>Clean capture window</strong><span class="state-pill ready">Available</span></div>
-          <p class="muted">Open a clean audience-only window for capture. Desktop capture may not preserve transparency; use NDI for an alpha-capable workflow when available.</p>
-          <button id="openCapture" class="btn btn-subtle full">Open clean capture output</button>
-        </div>
         <div class="output-card">
           <div class="output-title"><strong>NDI sender</strong><span id="ndiState" class="state-pill pending">SDK required</span></div>
           <label class="compact-label">Source name<input id="ndiName" type="text" value="ChurchFlow - Main Output"></label>
@@ -58,6 +49,17 @@
           <button id="runDiagnostics" class="btn btn-subtle full" type="button">Run system checks</button>
           <pre id="diagnosticsOutput" class="diagnostics-output" aria-live="polite">System checks have not been run yet.</pre>
         </div>
+        <div class="output-card">
+          <div class="output-title"><strong>Output layout</strong><span class="state-pill ready">Alpha output</span></div>
+          <label class="compact-label">Lyrics display mode<select id="outputMode"><option value="full">Full-screen lyrics</option><option value="lower-third">Transparent lower thirds</option></select></label>
+          <p class="muted">Lower-thirds mode places song lyrics along the bottom on a transparent canvas. Announcements and PowerPoint slides remain full-screen. For vMix transparency, use NDI when the optional NDI module is built; ordinary desktop capture may flatten the alpha channel.</p>
+        </div>
+        <div class="output-card">
+          <div class="output-title"><strong>Clean capture window</strong><span class="state-pill ready">Available</span></div>
+          <p class="muted">Open a clean audience-only window for capture. Desktop capture may not preserve transparency; use NDI for an alpha-capable workflow when available.</p>
+          <button id="openCapture" class="btn btn-subtle full">Open clean capture output</button>
+        </div>
+
       </div>
       <div class="offline-note"><span>●</span> Offline-ready · Changes save on this device</div>
     </aside>
