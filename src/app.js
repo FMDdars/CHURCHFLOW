@@ -22,7 +22,7 @@ const presentationDocs = new Map();
 let ndiActive = false;
 
 function defaultData() {
-  return { items: starter, service: ['s1', 'p1'], ndi: { name: 'ChurchFlow - Main Output', profile: '1080p · 30 fps' } };
+  return { items: starter, service: ['s1', 'p1'], outputMode: 'full', ndi: { name: 'ChurchFlow - Main Output', profile: '1080p · 30 fps' } };
 }
 
 function load() {
@@ -246,10 +246,13 @@ function wrapCanvasText(ctx, text, maxWidth) {
 
 async function createOutputCanvas(item, index, blank = false) {
   const canvas = document.createElement('canvas'); canvas.width = 1920; canvas.height = 1080;
-  const ctx = canvas.getContext('2d', { alpha: false });
-  ctx.fillStyle = '#050914'; ctx.fillRect(0, 0, 1920, 1080);
+  // Keep alpha enabled so the lower-third overlay can be composited by vMix / NDI.
+  const ctx = canvas.getContext('2d', { alpha: true });
+  ctx.clearRect(0, 0, 1920, 1080);
   if (blank) return canvas;
   if (item?.type === 'presentation') {
+    // Imported PowerPoint/PDF slides remain full-frame even when lower-thirds mode is selected.
+    ctx.fillStyle = '#050914'; ctx.fillRect(0, 0, 1920, 1080);
     const pdf = await getPresentationDoc(item);
     const page = await pdf.getPage(Math.min(Math.max(0, index), pdf.numPages - 1) + 1);
     const base = page.getViewport({ scale: 1 });
@@ -259,16 +262,40 @@ async function createOutputCanvas(item, index, blank = false) {
     await page.render({ canvasContext: ctx, viewport, transform: [1, 0, 0, 1, left, top] }).promise;
     return canvas;
   }
+
+  const body = slides(item)[index] || '';
+  if (data.outputMode === 'lower-third') {
+    // Transparent canvas with a translucent, bottom-aligned lyric panel.
+    const panelTop = 790;
+    const panelHeight = 250;
+    ctx.fillStyle = 'rgba(5, 9, 20, 0.78)';
+    ctx.fillRect(0, panelTop, 1920, panelHeight);
+    ctx.fillStyle = '#829bff';
+    ctx.fillRect(0, panelTop, 8, panelHeight);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#aebfff';
+    ctx.font = '600 25px Arial';
+    ctx.fillText(String(item?.title || '').slice(0, 90), 100, panelTop + 28);
+    ctx.fillStyle = '#ffffff';
+    const lines = wrapCanvasText(ctx, body, 1720);
+    const visibleLines = lines.slice(0, 3);
+    const fontSize = visibleLines.length >= 3 ? 43 : visibleLines.length === 2 ? 49 : 56;
+    ctx.font = `600 ${fontSize}px Arial`;
+    const lineHeight = fontSize * 1.28;
+    let y = panelTop + 78;
+    visibleLines.forEach((line) => { ctx.fillText(line, 100, y); y += lineHeight; });
+    return canvas;
+  }
+
+  // Full-screen lyrics/announcement output. No ChurchFlow branding or watermark is drawn.
   const gradient = ctx.createRadialGradient(1320, 250, 30, 1000, 540, 1250);
   gradient.addColorStop(0, '#263a65'); gradient.addColorStop(1, '#050914');
   ctx.fillStyle = gradient; ctx.fillRect(0, 0, 1920, 1080);
-  ctx.textAlign = 'center'; ctx.fillStyle = '#9fb2ff'; ctx.font = '600 24px Arial';
-  ctx.fillText('CHURCHFLOW', 960, 170);
-  ctx.fillStyle = '#ffffff'; ctx.font = '700 56px Arial';
-  const titleLines = wrapCanvasText(ctx, item?.title || 'ChurchFlow', 1550);
-  let y = 310; titleLines.slice(0, 2).forEach((line) => { ctx.fillText(line, 960, y); y += 70; });
+  ctx.textAlign = 'center'; ctx.fillStyle = '#ffffff'; ctx.font = '700 56px Arial';
+  const titleLines = wrapCanvasText(ctx, item?.title || '', 1550);
+  let y = 300; titleLines.slice(0, 2).forEach((line) => { ctx.fillText(line, 960, y); y += 70; });
   ctx.fillStyle = '#e3eaf8'; ctx.font = '400 62px Arial';
-  const body = slides(item)[index] || '';
   const lines = wrapCanvasText(ctx, body, 1560);
   const lineHeight = Math.min(88, 700 / Math.max(1, lines.length));
   y = Math.max(560, (1080 - lines.length * lineHeight) / 2 + 100);
@@ -524,6 +551,12 @@ $('#openDisplay').onclick = openDisplay;
 $('#openAnother').onclick = openDisplay;
 $('#openCapture').onclick = openDisplay;
 
+$('#outputMode').value = data.outputMode === 'lower-third' ? 'lower-third' : 'full';
+$('#outputMode').onchange = async () => {
+  data.outputMode = $('#outputMode').value === 'lower-third' ? 'lower-third' : 'full';
+  save();
+  await sendDisplays();
+};
 $('#ndiName').value = data.ndi?.name || 'ChurchFlow - Main Output';
 $('#ndiProfile').value = data.ndi?.profile || '1080p · 30 fps';
 $('#saveNdi').onclick = () => { data.ndi = { name: $('#ndiName').value.trim() || 'ChurchFlow - Main Output', profile: $('#ndiProfile').value }; save(); $('#ndiStatus').textContent = 'NDI source settings saved.'; };
