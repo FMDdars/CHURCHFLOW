@@ -738,7 +738,7 @@ $('#installUpdate').onclick = async () => {
   const button = $('#installUpdate'); button.disabled = true;
   try {
     if (updateReadyToInstall) await window.churchflowDesktop.installUpdate();
-    else { await window.churchflowDesktop.downloadUpdate(); button.hidden = true; $('#updateMessage').textContent = 'Downloading update…'; }
+    else { await window.churchflowDesktop.downloadUpdate(); }
   } catch (error) { showUpdateState({ status: 'error', message: error.message }); }
   finally { button.disabled = false; }
 };
