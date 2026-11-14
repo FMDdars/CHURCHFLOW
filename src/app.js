@@ -118,6 +118,24 @@ function renderLibrary() {
     const empty = document.createElement('p'); empty.className = 'empty-library';
     empty.textContent = 'No PowerPoint or PDF presentations imported yet. Use Import PowerPoint to add a deck.';
     library.append(empty);
+  } else if (!library.children.length && tab === 'songs' && query.trim()) {
+    const empty = document.createElement('p'); empty.className = 'empty-library';
+    empty.textContent = 'No saved songs match that title. Search online lyrics catalogues instead.';
+    const onlineButton = document.createElement('button');
+    onlineButton.type = 'button';
+    onlineButton.className = 'btn btn-primary full';
+    onlineButton.textContent = 'Search online lyrics';
+    onlineButton.onclick = () => {
+      tab = 'online';
+      document.querySelectorAll('.tab').forEach((button) => button.classList.toggle('active', button.dataset.tab === tab));
+      renderLibrary();
+      searchOnline();
+    };
+    library.append(empty, onlineButton);
+  } else if (!library.children.length && tab === 'slides' && query.trim()) {
+    const empty = document.createElement('p'); empty.className = 'empty-library';
+    empty.textContent = 'No announcement slides match that search.';
+    library.append(empty);
   }
 }
 
@@ -215,10 +233,9 @@ function paint(element, item, index, blank = false) {
   }
   const parts = slides(item); const content = parts[index] || 'Select an item';
   const wrap = document.createElement('div'); wrap.className = 'preview-content';
-  const tag = document.createElement('span'); tag.className = 'eyebrow'; tag.textContent = 'CHURCHFLOW';
   const heading = document.createElement(element.id === 'livePreview' ? 'h2' : 'h1'); heading.textContent = item?.title || 'ChurchFlow';
   const paragraph = document.createElement('p'); paragraph.textContent = content;
-  wrap.append(tag, heading, paragraph); element.append(wrap);
+  wrap.append(heading, paragraph); element.append(wrap);
 }
 
 function render() {
@@ -319,7 +336,9 @@ async function publishNdiFrame(canvas) {
     let frameCanvas = canvas;
     if (canvas.width !== outputWidth || canvas.height !== outputHeight) {
       frameCanvas = document.createElement('canvas'); frameCanvas.width = outputWidth; frameCanvas.height = outputHeight;
-      frameCanvas.getContext('2d', { alpha: false }).drawImage(canvas, 0, 0, outputWidth, outputHeight);
+      const resizeContext = frameCanvas.getContext('2d', { alpha: true });
+      resizeContext.clearRect(0, 0, outputWidth, outputHeight);
+      resizeContext.drawImage(canvas, 0, 0, outputWidth, outputHeight);
     }
     const image = frameCanvas.getContext('2d').getImageData(0, 0, frameCanvas.width, frameCanvas.height);
     await window.churchflowDesktop.ndiSendFrame(new Uint8Array(image.data.buffer), frameCanvas.width, frameCanvas.height);
