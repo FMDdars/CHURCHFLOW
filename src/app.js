@@ -42,6 +42,22 @@ function save() {
 
 function slides(item) {
   if (item?.type === 'presentation') return Array.from({ length: Math.max(1, Number(item.slideCount) || 1) }, (_, index) => `Slide ${index + 1}`);
+  if (item?.type === 'song') {
+    const lowerThird = data.outputMode === 'lower-third';
+    const maxLines = lowerThird ? 2 : 4;
+    const measure = document.createElement('canvas').getContext('2d');
+    measure.font = lowerThird ? '600 54px Arial' : '400 62px Arial';
+    const maxWidth = lowerThird ? 1720 : 1560;
+    const lyricLines = (item.body || '').split(/\n---\n/g)
+      .flatMap((stanza) => stanza.split(/\r?\n/))
+      .flatMap((line) => wrapCanvasText(measure, line.trim(), maxWidth))
+      .filter((line) => line.trim());
+    const pages = [];
+    for (let index = 0; index < lyricLines.length; index += maxLines) {
+      pages.push(lyricLines.slice(index, index + maxLines).join('\n'));
+    }
+    return pages.length ? pages : [''];
+  }
   return (item?.body || '').split(/\n---\n/g).map((part) => part.trim()).filter(Boolean);
 }
 
@@ -91,7 +107,7 @@ function renderLibrary() {
   library.innerHTML = '';
   const online = tab === 'online';
   $('#onlineStatus').hidden = !online;
-  $('#onlineSearchButton').hidden = !online;
+  $('#onlineSearchButton').hidden = true;
   $('#onlineProviderTools').hidden = !online;
   $('#libraryFooter').hidden = online;
   $('#search').placeholder = online ? 'Search online lyrics…' : tab === 'presentations' ? 'Search imported presentations…' : 'Search songs and slides…';
@@ -120,18 +136,8 @@ function renderLibrary() {
     library.append(empty);
   } else if (!library.children.length && tab === 'songs' && query.trim()) {
     const empty = document.createElement('p'); empty.className = 'empty-library';
-    empty.textContent = 'No saved songs match that title. Search online lyrics catalogues instead.';
-    const onlineButton = document.createElement('button');
-    onlineButton.type = 'button';
-    onlineButton.className = 'btn btn-primary full';
-    onlineButton.textContent = 'Search online lyrics';
-    onlineButton.onclick = () => {
-      tab = 'online';
-      document.querySelectorAll('.tab').forEach((button) => button.classList.toggle('active', button.dataset.tab === tab));
-      renderLibrary();
-      searchOnline();
-    };
-    library.append(empty, onlineButton);
+    empty.textContent = 'No saved song found. Searching online lyrics catalogues automatically…';
+    library.append(empty);
   } else if (!library.children.length && tab === 'slides' && query.trim()) {
     const empty = document.createElement('p'); empty.className = 'empty-library';
     empty.textContent = 'No announcement slides match that search.';
@@ -567,19 +573,34 @@ async function stopNdi() {
 }
 
 $('#search').addEventListener('input', () => {
-  if (tab !== 'online') { renderLibrary(); return; }
   clearTimeout(onlineSearchTimer);
-  onlineSearchRequest += 1; // Ignore any older search while the user is still typing.
   const query = $('#search').value.trim();
-  if (query.length < 2) {
-    onlineResults = [];
-    $('#onlineSearchButton').disabled = false;
-    $('#onlineStatus').textContent = 'Type at least two characters. Search will start automatically.';
-    renderOnlineResults();
+  if (tab === 'online') {
+    onlineSearchRequest += 1; // Ignore any older search while the user is still typing.
+    if (query.length < 2) {
+      onlineResults = [];
+      $('#onlineSearchButton').disabled = false;
+      $('#onlineStatus').textContent = 'Type at least two characters. Search will start automatically.';
+      renderOnlineResults();
+      return;
+    }
+    $('#onlineStatus').textContent = 'Searching automatically…';
+    onlineSearchTimer = setTimeout(() => searchOnline(), 650);
     return;
   }
-  $('#onlineStatus').textContent = 'Searching will start automatically…';
-  onlineSearchTimer = setTimeout(() => searchOnline(), 650);
+
+  renderLibrary();
+  if (tab !== 'songs' || query.length < 2) return;
+  const hasLocalMatch = data.items.some((item) => item.type === 'song' && searchScore(item, query) > 0);
+  if (hasLocalMatch) return;
+  onlineSearchTimer = setTimeout(() => {
+    if ($('#search').value.trim() !== query || tab !== 'songs') return;
+    tab = 'online';
+    document.querySelectorAll('.tab').forEach((button) => button.classList.toggle('active', button.dataset.tab === tab));
+    onlineResults = [];
+    renderLibrary();
+    searchOnline();
+  }, 650);
 });
 $('#search').addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && tab === 'online') {
