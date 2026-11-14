@@ -691,7 +691,7 @@ window.addEventListener('beforeunload', () => { if (ndiActive) window.churchflow
 window.addEventListener('keydown', async (event) => {
   const target = event.target;
   const isTyping = target && (target.matches('input, textarea, select') || target.isContentEditable);
-  if (isTyping || $('#editor').open || $('#onlineHymnDialog').open || $('#lyricsKeyDialog').open) return;
+  if (isTyping || $('#editor').open || $('#onlineHymnDialog').open) return;
   const count = slides(liveItem).length;
   if (event.key === 'ArrowRight' || event.code === 'Space') {
     event.preventDefault(); liveIndex = Math.min(Math.max(0, count - 1), liveIndex + 1); liveBlank = false; render(); await sendDisplays();
