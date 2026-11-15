@@ -1,15 +1,78 @@
 #include <napi.h>
 #include <Processing.NDI.Lib.h>
+#include <windows.h>
 #include <cstdint>
 #include <string>
 #include <vector>
 
 namespace {
+HMODULE ndiLibrary = nullptr;
+const NDIlib_v6_3* ndiApi = nullptr;
 NDIlib_send_instance_t sender = nullptr;
 bool initialized = false;
 int frameWidth = 0;
 int frameHeight = 0;
 std::vector<uint8_t> bgraFrame;
+
+std::wstring EnvironmentValue(const wchar_t* name) {
+  wchar_t value[32768]{};
+  const DWORD length = GetEnvironmentVariableW(name, value, static_cast<DWORD>(std::size(value)));
+  return length > 0 && length < std::size(value) ? std::wstring(value, length) : std::wstring();
+}
+
+bool LoadNdiApi() {
+  if (ndiApi) return true;
+
+  const std::wstring programFiles = EnvironmentValue(L"ProgramW6432").empty()
+      ? L"C:\\Program Files" : EnvironmentValue(L"ProgramW6432");
+  const std::wstring sdkDirectory = EnvironmentValue(L"NDI_SDK_DIR");
+  const std::wstring runtimeDirectory = EnvironmentValue(L"NDI_RUNTIME_DIR_V6");
+  const std::wstring dllName = L"Processing.NDI.Lib.x64.dll";
+
+  std::vector<std::wstring> candidates;
+  if (!runtimeDirectory.empty()) candidates.push_back(runtimeDirectory + L"\\" + dllName);
+  candidates.push_back(programFiles + L"\\NDI\\NDI 6 Runtime\\" + dllName);
+  if (!sdkDirectory.empty()) {
+    candidates.push_back(sdkDirectory + L"\\Bin\\x64\\" + dllName);
+    candidates.push_back(sdkDirectory + L"\\Bin\\" + dllName);
+  }
+
+  for (const auto& candidate : candidates) {
+    ndiLibrary = LoadLibraryW(candidate.c_str());
+    if (ndiLibrary) break;
+  }
+  // Permit a standard NDI Runtime installation already registered on PATH.
+  if (!ndiLibrary) ndiLibrary = LoadLibraryW(dllName.c_str());
+  if (!ndiLibrary) return false;
+
+  using LoadApiFunction = const NDIlib_v6_3* (__cdecl*)();
+  auto loadApi = reinterpret_cast<LoadApiFunction>(
+      GetProcAddress(ndiLibrary, "NDIlib_v6_3_load"));
+  if (!loadApi) {
+    FreeLibrary(ndiLibrary);
+    ndiLibrary = nullptr;
+    return false;
+  }
+
+  ndiApi = loadApi();
+  if (!ndiApi || !ndiApi->initialize || !ndiApi->destroy ||
+      !ndiApi->send_create || !ndiApi->send_destroy ||
+      !ndiApi->send_send_video_v2) {
+    ndiApi = nullptr;
+    FreeLibrary(ndiLibrary);
+    ndiLibrary = nullptr;
+    return false;
+  }
+  return true;
+}
+
+void UnloadNdiApi() {
+  ndiApi = nullptr;
+  if (ndiLibrary) {
+    FreeLibrary(ndiLibrary);
+    ndiLibrary = nullptr;
+  }
+}
 
 Napi::Value Initialize(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
@@ -17,18 +80,20 @@ Napi::Value Initialize(const Napi::CallbackInfo& info) {
     Napi::TypeError::New(env, "A source name is required.").ThrowAsJavaScriptException();
     return env.Undefined();
   }
-  if (sender) { NDIlib_send_destroy(sender); sender = nullptr; }
+  if (!LoadNdiApi()) return Napi::Boolean::New(env, false);
+  if (sender) { ndiApi->send_destroy(sender); sender = nullptr; }
   if (!initialized) {
-    initialized = NDIlib_initialize();
+    initialized = ndiApi->initialize();
     if (!initialized) return Napi::Boolean::New(env, false);
   }
+
   const std::string sourceName = info[0].As<Napi::String>().Utf8Value();
   NDIlib_send_create_t description{};
   description.p_ndi_name = sourceName.c_str();
   description.p_groups = nullptr;
   description.clock_video = true;
   description.clock_audio = false;
-  sender = NDIlib_send_create(&description);
+  sender = ndiApi->send_create(&description);
   bgraFrame.clear();
   frameWidth = 0;
   frameHeight = 0;
@@ -58,7 +123,6 @@ Napi::Value SetFrame(const Napi::CallbackInfo& info) {
     return env.Undefined();
   }
 
-  // Convert once when a new slide is sent. The native frame is then reused by the sender clock.
   std::vector<uint8_t> nextFrame(expected);
   for (size_t i = 0; i < expected; i += 4) {
     nextFrame[i] = rgba[i + 2];
@@ -74,7 +138,9 @@ Napi::Value SetFrame(const Napi::CallbackInfo& info) {
 
 Napi::Value SendFrame(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
-  if (!sender || bgraFrame.empty() || frameWidth < 1 || frameHeight < 1) return Napi::Boolean::New(env, false);
+  if (!sender || !ndiApi || bgraFrame.empty() || frameWidth < 1 || frameHeight < 1) {
+    return Napi::Boolean::New(env, false);
+  }
   if (info.Length() < 1 || !info[0].IsNumber()) {
     Napi::TypeError::New(env, "sendFrame expects fps.").ThrowAsJavaScriptException();
     return env.Undefined();
@@ -98,14 +164,18 @@ Napi::Value SendFrame(const Napi::CallbackInfo& info) {
   frame.line_stride_in_bytes = frameWidth * 4;
   frame.p_metadata = nullptr;
   frame.timestamp = 0;
-  NDIlib_send_send_video_v2(sender, &frame);
+  ndiApi->send_send_video_v2(sender, &frame);
   return Napi::Boolean::New(env, true);
 }
 
 Napi::Value Close(const Napi::CallbackInfo& info) {
-  if (sender) { NDIlib_send_destroy(sender); sender = nullptr; }
-  bgraFrame.clear(); frameWidth = 0; frameHeight = 0;
-  if (initialized) { NDIlib_destroy(); initialized = false; }
+  if (sender && ndiApi) { ndiApi->send_destroy(sender); sender = nullptr; }
+  bgraFrame.clear();
+  frameWidth = 0;
+  frameHeight = 0;
+  if (initialized && ndiApi) ndiApi->destroy();
+  initialized = false;
+  UnloadNdiApi();
   return Napi::Boolean::New(info.Env(), true);
 }
 
