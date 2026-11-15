@@ -2,6 +2,7 @@
 #include <Processing.NDI.Lib.h>
 #include <windows.h>
 #include <cstdint>
+#include <iterator>
 #include <string>
 #include <vector>
 
