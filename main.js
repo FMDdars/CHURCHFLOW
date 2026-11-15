@@ -671,7 +671,7 @@ function loadNdiAddon() {
 
 ipcMain.handle('churchflow:ndi-start', async (_event, settings) => {
   const addon = loadNdiAddon();
-  if (!addon) throw new Error('Native NDI is not built yet. Install the official NDI SDK, set NDI_SDK_DIR, then run Build-NDI-Module.bat. Desktop Capture remains available in the meantime.');
+  if (!addon) throw new Error('The NDI native module is not available in this build. Reinstall or rebuild ChurchFlow with NDI support. Desktop Capture remains available in the meantime.');
   const allowedProfiles = ['1080p · 30 fps', '1080p · 60 fps', '720p · 30 fps', '720p · 60 fps'];
   const requestedProfile = String(settings?.profile || '1080p · 30 fps');
   if (!allowedProfiles.includes(requestedProfile)) throw new Error('Choose a supported NDI output profile.');
