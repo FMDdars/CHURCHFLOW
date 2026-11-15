@@ -8,18 +8,22 @@ const root = path.resolve(__dirname, '..');
 const requiredFiles = [
   'index.html', 'display.html', 'manifest.webmanifest', 'main.js', 'preload.js',
   'src/app.js', 'src/styles.css', 'assets/churchflow.ico', 'assets/churchflow-logo.jpg',
-  'native/ndi/binding.gyp', 'native/ndi/ndi_sender.cpp',
+  'native/ndi/binding.gyp', 'native/ndi/ndi_sender.cpp', 'native/ndi/include/README.md',
+  'native/ndi/include/Processing.NDI.Lib.h', 'native/ndi/include/Processing.NDI.compat.h',
+  'native/ndi/include/Processing.NDI.structs.h', 'native/ndi/include/Processing.NDI.Find.h',
+  'native/ndi/include/Processing.NDI.Recv.h', 'native/ndi/include/Processing.NDI.Recv.ex.h',
+  'native/ndi/include/Processing.NDI.RecvAdvertiser.h', 'native/ndi/include/Processing.NDI.RecvListener.h',
+  'native/ndi/include/Processing.NDI.Send.h', 'native/ndi/include/Processing.NDI.SendAdvertiser.h',
+  'native/ndi/include/Processing.NDI.SendListener.h', 'native/ndi/include/Processing.NDI.Routing.h',
+  'native/ndi/include/Processing.NDI.utilities.h', 'native/ndi/include/Processing.NDI.deprecated.h',
+  'native/ndi/include/Processing.NDI.FrameSync.h', 'native/ndi/include/Processing.NDI.DynamicLoad.h',
+  'native/ndi/include/Processing.NDI.Lib.cplusplus.h',
   '.github/workflows/windows-installer.yml'
 ];
 const problems = [];
-const ndiArtifacts = [
-  'native/ndi/build/Release/churchflow_ndi.node',
-  'native/ndi/build/Release/Processing.NDI.Lib.x64.dll',
-  'native/ndi/build/Release/Processing.NDI.Lib.Licenses.txt'
-];
-const ndiPresent = ndiArtifacts.filter((relative) => fs.existsSync(path.join(root, relative)));
-if (ndiPresent.length > 0 && ndiPresent.length !== ndiArtifacts.length) {
-  problems.push(`Incomplete NDI runtime bundle: found ${ndiPresent.length} of ${ndiArtifacts.length} required files. Supply the complete, licensed bundle or omit all three.`);
+const ndiAddonPath = path.join(root, 'native/ndi/build/Release/churchflow_ndi.node');
+if (process.env.CI === 'true' && !fs.existsSync(ndiAddonPath)) {
+  problems.push('The Electron-compatible NDI native addon was not built before packaging.');
 }
 for (const relative of requiredFiles) {
   if (!fs.existsSync(path.join(root, relative))) problems.push(`Missing required file: ${relative}`);
@@ -48,7 +52,7 @@ try {
   if (pkg.engines?.node !== '>=24.0.0 <27') problems.push('Node.js engine range must allow supported major versions 24 through 26.');
   if (!pkg.build?.files?.includes('manifest.webmanifest')) problems.push('manifest.webmanifest is not included in the packaged application.');
   const ndiUnpack = pkg.build?.asarUnpack || [];
-  for (const pattern of ['native/ndi/build/Release/**/*.node', 'native/ndi/build/Release/**/*.dll', 'native/ndi/build/Release/**/*.txt']) {
+  for (const pattern of ['native/ndi/build/Release/**/*.node']) {
     if (!ndiUnpack.includes(pattern)) problems.push(`NDI release packaging is missing asarUnpack pattern: ${pattern}`);
   }
   if (!pkg.build?.win?.target?.includes('nsis') || !pkg.build?.win?.target?.includes('portable')) problems.push('Windows NSIS and portable targets must both be configured.');
@@ -62,5 +66,5 @@ if (problems.length) {
 } else {
   console.log('ChurchFlow project check passed.');
   console.log(`Checked ${requiredFiles.length} required files, 3 JavaScript files and ${new Set(appSelectors).size} renderer selectors.`);
-  if (ndiPresent.length === 0) console.warn('NDI native runtime is not bundled. ChurchFlow will build, but NDI output remains unavailable until an authorized complete NDI bundle is supplied.');
+  if (!fs.existsSync(ndiAddonPath)) console.warn('NDI native addon has not been built locally. The Windows release workflow builds it before packaging. The official NDI Runtime 6 must be installed separately on each target computer.');
 }
