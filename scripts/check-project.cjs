@@ -9,6 +9,9 @@ const requiredFiles = [
   'index.html', 'display.html', 'manifest.webmanifest', 'main.js', 'preload.js',
   'src/app.js', 'src/styles.css', 'assets/churchflow.ico', 'assets/churchflow-logo.jpg',
   'native/ndi/binding.gyp', 'native/ndi/ndi_sender.cpp',
+  'native/ndi/build/Release/churchflow_ndi.node',
+  'native/ndi/build/Release/Processing.NDI.Lib.x64.dll',
+  'native/ndi/build/Release/Processing.NDI.Lib.Licenses.txt',
   '.github/workflows/windows-installer.yml'
 ];
 const problems = [];
@@ -38,6 +41,10 @@ try {
   if (pkg.devDependencies?.electron !== '45.2.3') problems.push('Electron must remain pinned to the v0.7 tested release.');
   if (pkg.engines?.node !== '>=24.0.0 <27') problems.push('Node.js engine range must allow supported major versions 24 through 26.');
   if (!pkg.build?.files?.includes('manifest.webmanifest')) problems.push('manifest.webmanifest is not included in the packaged application.');
+  const ndiUnpack = pkg.build?.asarUnpack || [];
+  for (const pattern of ['native/ndi/build/Release/**/*.node', 'native/ndi/build/Release/**/*.dll', 'native/ndi/build/Release/**/*.txt']) {
+    if (!ndiUnpack.includes(pattern)) problems.push(`NDI release packaging is missing asarUnpack pattern: ${pattern}`);
+  }
   if (!pkg.build?.win?.target?.includes('nsis') || !pkg.build?.win?.target?.includes('portable')) problems.push('Windows NSIS and portable targets must both be configured.');
   try { JSON.parse(fs.readFileSync(path.join(root, 'native/ndi/binding.gyp'), 'utf8')); } catch (error) { problems.push(`NDI binding.gyp is not valid JSON: ${error.message}`); }
 } catch (error) { problems.push(`package.json could not be read: ${error.message}`); }
