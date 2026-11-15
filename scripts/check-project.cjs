@@ -9,12 +9,18 @@ const requiredFiles = [
   'index.html', 'display.html', 'manifest.webmanifest', 'main.js', 'preload.js',
   'src/app.js', 'src/styles.css', 'assets/churchflow.ico', 'assets/churchflow-logo.jpg',
   'native/ndi/binding.gyp', 'native/ndi/ndi_sender.cpp',
-  'native/ndi/build/Release/churchflow_ndi.node',
-  'native/ndi/build/Release/Processing.NDI.Lib.x64.dll',
-  'native/ndi/build/Release/Processing.NDI.Lib.Licenses.txt',
   '.github/workflows/windows-installer.yml'
 ];
 const problems = [];
+const ndiArtifacts = [
+  'native/ndi/build/Release/churchflow_ndi.node',
+  'native/ndi/build/Release/Processing.NDI.Lib.x64.dll',
+  'native/ndi/build/Release/Processing.NDI.Lib.Licenses.txt'
+];
+const ndiPresent = ndiArtifacts.filter((relative) => fs.existsSync(path.join(root, relative)));
+if (ndiPresent.length > 0 && ndiPresent.length !== ndiArtifacts.length) {
+  problems.push(`Incomplete NDI runtime bundle: found ${ndiPresent.length} of ${ndiArtifacts.length} required files. Supply the complete, licensed bundle or omit all three.`);
+}
 for (const relative of requiredFiles) {
   if (!fs.existsSync(path.join(root, relative))) problems.push(`Missing required file: ${relative}`);
 }
@@ -56,4 +62,5 @@ if (problems.length) {
 } else {
   console.log('ChurchFlow project check passed.');
   console.log(`Checked ${requiredFiles.length} required files, 3 JavaScript files and ${new Set(appSelectors).size} renderer selectors.`);
+  if (ndiPresent.length === 0) console.warn('NDI native runtime is not bundled. ChurchFlow will build, but NDI output remains unavailable until an authorized complete NDI bundle is supplied.');
 }
