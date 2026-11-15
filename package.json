@@ -32,7 +32,8 @@
     "asar": true,
     "asarUnpack": [
       "native/ndi/build/Release/**/*.node",
-      "native/ndi/build/Release/**/*.dll"
+      "native/ndi/build/Release/**/*.dll",
+      "native/ndi/build/Release/**/*.txt"
     ],
     "directories": {
       "output": "dist"

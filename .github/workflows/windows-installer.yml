@@ -39,6 +39,9 @@ jobs:
       - name: Install project dependencies
         run: npm install
 
+      - name: Check project files and JavaScript syntax
+        run: npm run check
+
       - name: Assign a unique release version
         run: npm version "0.9.${{ github.run_number }}" --no-git-tag-version
 
@@ -57,9 +60,6 @@ jobs:
             --notes "ChurchFlow Windows release with automatic in-app updates."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Check project files and JavaScript syntax
-        run: npm run check
 
       - name: Build and publish Windows installer and portable app
         run: npm run dist:win:publish
