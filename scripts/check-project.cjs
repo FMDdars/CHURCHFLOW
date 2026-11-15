@@ -7,7 +7,7 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const requiredFiles = [
   'index.html', 'display.html', 'manifest.webmanifest', 'main.js', 'preload.js',
-  'src/app.js', 'src/styles.css', 'assets/churchflow.ico', 'assets/churchflow-logo.jpg',
+  'src/app.js', 'src/styles.css', 'assets/churchflow.ico', 'assets/churchflow.png',
   'native/ndi/binding.gyp', 'native/ndi/ndi_sender.cpp', 'native/ndi/include/README.md',
   'native/ndi/include/Processing.NDI.Lib.h', 'native/ndi/include/Processing.NDI.compat.h',
   'native/ndi/include/Processing.NDI.structs.h', 'native/ndi/include/Processing.NDI.Find.h',
