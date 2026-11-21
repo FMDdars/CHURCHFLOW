@@ -71,3 +71,19 @@
 .splash-loader{width:26px;height:26px;border:2px solid #43516c;border-top-color:#91a5ff;border-radius:50%;animation:churchflow-spin .85s linear infinite}
 @keyframes churchflow-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.splash-screen{transition:none}.splash-loader{animation:none}}
+
+
+/* Song preview: all generated slides, with independent preview and live markers. */
+.song-slide-strip{margin-top:12px;min-width:0}
+.song-slide-strip[hidden]{display:none!important}
+.song-slide-status{font-size:10px;font-weight:700;letter-spacing:.08em;color:#9fb2ff;margin:0 0 8px}
+.song-slide-list{display:flex;gap:9px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:thin;scrollbar-color:#405783 #111827}
+.song-slide-card{flex:0 0 164px;min-height:112px;display:flex;flex-direction:column;align-items:stretch;gap:8px;text-align:left;padding:10px;border:1px solid #344158;border-radius:9px;background:#0b1220;color:#e9edf6;cursor:pointer}
+.song-slide-card:hover{border-color:#7189c7;background:#152139}
+.song-slide-card.is-selected{border-color:#7189ff;box-shadow:0 0 0 1px #7189ff inset}
+.song-slide-card.is-live{border-color:#52c994;box-shadow:0 0 0 1px #52c994 inset}
+.song-slide-number{font-size:9px;font-weight:800;letter-spacing:.08em;color:#9fb2ff}
+.song-slide-excerpt{font-size:11px;line-height:1.4;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;color:#dce4f4;min-height:46px}
+.song-slide-live-marker{font-size:9px;font-weight:800;color:#8ce0b6;min-height:11px}
+.song-slide-card.is-selected .song-slide-live-marker{color:#aabaff}
+.song-slide-card.is-live .song-slide-live-marker{color:#8ce0b6}
