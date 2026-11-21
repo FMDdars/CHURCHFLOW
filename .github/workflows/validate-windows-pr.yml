@@ -1,0 +1,45 @@
+name: Validate ChurchFlow Windows changes
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-windows:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - name: Check out ChurchFlow
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Electron-compatible NDI native addon
+        run: node_modules/.bin/node-gyp.cmd rebuild --directory native/ndi --arch=x64 --target=45.2.3 --dist-url=https://electronjs.org/headers
+
+      - name: Run project validation
+        run: npm run check
+
+      - name: Build Windows installer and portable package without publishing
+        run: npm run dist:win
+
+      - name: Upload Windows build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChurchFlow-preview-build
+          path: |
+            dist/*Setup*.exe
+            dist/*Portable*.exe
+          if-no-files-found: error
+          retention-days: 14
