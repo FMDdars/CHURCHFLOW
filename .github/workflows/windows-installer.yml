@@ -100,7 +100,7 @@ jobs:
           if (-not ($assets.Name -contains "latest.yml")) {
             throw "latest.yml is not present in the release upload set."
           }
-          gh release upload "v0.9.${{ github.run_number }}" --clobber -- $assets.FullName
+          gh release upload "v0.9.${{ github.run_number }}" $assets.FullName --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
