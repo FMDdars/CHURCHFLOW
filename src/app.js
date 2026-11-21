@@ -248,12 +248,63 @@ function paint(element, item, index, blank = false) {
   wrap.append(heading, paragraph); element.append(wrap);
 }
 
+function renderSongSlideStrip(item) {
+  const strip = $('#songSlideStrip');
+  strip.innerHTML = '';
+  strip.hidden = item?.type !== 'song';
+  if (strip.hidden) return;
+
+  const parts = slides(item);
+  const status = document.createElement('div');
+  status.className = 'song-slide-status';
+  if (liveBlank) {
+    status.textContent = 'LIVE OUTPUT IS BLACK';
+  } else if (liveItem?.id === item.id) {
+    status.textContent = `LIVE · Slide ${liveIndex + 1} of ${parts.length}`;
+  } else if (liveItem) {
+    status.textContent = `Currently live: ${liveItem.title} · Slide ${liveIndex + 1}`;
+  } else {
+    status.textContent = 'This song is not currently live';
+  }
+  strip.append(status);
+
+  const list = document.createElement('div');
+  list.className = 'song-slide-list';
+  parts.forEach((part, index) => {
+    const isLive = !liveBlank && liveItem?.id === item.id && liveIndex === index;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `song-slide-card${slideIndex === index ? ' is-selected' : ''}${isLive ? ' is-live' : ''}`;
+    button.setAttribute('aria-label', `Preview slide ${index + 1}${isLive ? ', currently live' : ''}`);
+    if (isLive) button.setAttribute('aria-current', 'true');
+
+    const number = document.createElement('span');
+    number.className = 'song-slide-number';
+    number.textContent = `SLIDE ${index + 1}`;
+    const excerpt = document.createElement('span');
+    excerpt.className = 'song-slide-excerpt';
+    excerpt.textContent = part || '(Empty slide)';
+    const marker = document.createElement('span');
+    marker.className = 'song-slide-live-marker';
+    marker.textContent = isLive ? '● LIVE NOW' : slideIndex === index ? 'PREVIEW' : '';
+    button.append(number, excerpt, marker);
+    button.addEventListener('click', () => {
+      // Selecting a thumbnail changes preview only; audience output stays untouched.
+      slideIndex = index;
+      render();
+    });
+    list.append(button);
+  });
+  strip.append(list);
+}
+
 function render() {
   renderLibrary(); renderService();
   const item = current(); const count = item ? slides(item).length : 0;
   $('#slideCounter').textContent = `Slide ${item ? slideIndex + 1 : 0} of ${count}`;
   $('#presenterViewButton').hidden = item?.type !== 'presentation' && liveItem?.type !== 'presentation';
   paint($('#preview'), item, slideIndex);
+  renderSongSlideStrip(item);
   paint($('#livePreview'), liveItem, liveIndex, liveBlank);
   if ($('#presenterDialog').open) updatePresenterView().catch(console.error);
 }
