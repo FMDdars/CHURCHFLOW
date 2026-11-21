@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog, screen } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('node:path');
 const fs = require('node:fs');
@@ -59,13 +59,26 @@ function createWindow() {
     try {
       const target = new URL(url);
       if (target.protocol === 'file:' && decodeURIComponent(target.pathname).toLowerCase().endsWith('/display.html')) {
+        // Put the audience output on the first non-primary display. Windows'
+        // display numbering can vary, so use Electron's actual display bounds.
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const secondaryDisplay = screen.getAllDisplays().find((display) => display.id !== primaryDisplay.id);
+        const targetBounds = secondaryDisplay?.workArea;
         return {
           action: 'allow',
           overrideBrowserWindowOptions: {
-            width: 1280,
-            height: 720,
-            minWidth: 640,
-            minHeight: 360,
+            ...(targetBounds ? {
+              x: targetBounds.x,
+              y: targetBounds.y,
+              width: targetBounds.width,
+              height: targetBounds.height,
+              fullscreen: true
+            } : {
+              width: 1280,
+              height: 720,
+              minWidth: 640,
+              minHeight: 360
+            }),
             autoHideMenuBar: true,
             backgroundColor: '#00000000',
             transparent: true,

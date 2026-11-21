@@ -248,12 +248,63 @@ function paint(element, item, index, blank = false) {
   wrap.append(heading, paragraph); element.append(wrap);
 }
 
+function renderSongSlideStrip(item) {
+  const strip = $('#songSlideStrip');
+  strip.innerHTML = '';
+  strip.hidden = item?.type !== 'song';
+  if (strip.hidden) return;
+
+  const parts = slides(item);
+  const status = document.createElement('div');
+  status.className = 'song-slide-status';
+  if (liveBlank) {
+    status.textContent = 'LIVE OUTPUT IS BLACK';
+  } else if (liveItem?.id === item.id) {
+    status.textContent = `LIVE · Slide ${liveIndex + 1} of ${parts.length}`;
+  } else if (liveItem) {
+    status.textContent = `Currently live: ${liveItem.title} · Slide ${liveIndex + 1}`;
+  } else {
+    status.textContent = 'This song is not currently live';
+  }
+  strip.append(status);
+
+  const list = document.createElement('div');
+  list.className = 'song-slide-list';
+  parts.forEach((part, index) => {
+    const isLive = !liveBlank && liveItem?.id === item.id && liveIndex === index;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `song-slide-card${slideIndex === index ? ' is-selected' : ''}${isLive ? ' is-live' : ''}`;
+    button.setAttribute('aria-label', `Preview slide ${index + 1}${isLive ? ', currently live' : ''}`);
+    if (isLive) button.setAttribute('aria-current', 'true');
+
+    const number = document.createElement('span');
+    number.className = 'song-slide-number';
+    number.textContent = `SLIDE ${index + 1}`;
+    const excerpt = document.createElement('span');
+    excerpt.className = 'song-slide-excerpt';
+    excerpt.textContent = part || '(Empty slide)';
+    const marker = document.createElement('span');
+    marker.className = 'song-slide-live-marker';
+    marker.textContent = isLive ? '● LIVE NOW' : slideIndex === index ? 'PREVIEW' : '';
+    button.append(number, excerpt, marker);
+    button.addEventListener('click', () => {
+      // Selecting a thumbnail changes preview only; audience output stays untouched.
+      slideIndex = index;
+      render();
+    });
+    list.append(button);
+  });
+  strip.append(list);
+}
+
 function render() {
   renderLibrary(); renderService();
   const item = current(); const count = item ? slides(item).length : 0;
   $('#slideCounter').textContent = `Slide ${item ? slideIndex + 1 : 0} of ${count}`;
   $('#presenterViewButton').hidden = item?.type !== 'presentation' && liveItem?.type !== 'presentation';
   paint($('#preview'), item, slideIndex);
+  renderSongSlideStrip(item);
   paint($('#livePreview'), liveItem, liveIndex, liveBlank);
   if ($('#presenterDialog').open) updatePresenterView().catch(console.error);
 }
@@ -407,15 +458,42 @@ function addItem(type) {
   $('#editor').dataset.type = type; $('#editor').showModal();
 }
 
+async function fetchOnlineLyrics(summary) {
+  if (summary.provider === 'local') return { ...summary, body: summary.body };
+  if (summary.provider === 'lrclib') return window.churchflowDesktop.getLrclibLyrics(summary.id);
+  if (summary.provider === 'lrc-red') return window.churchflowDesktop.getLrcRedLyrics(summary.isrc || summary.id);
+  if (summary.provider === 'lyrics-ovh') return window.churchflowDesktop.getLyricsOvhLyrics(summary.artist, summary.title);
+  if (summary.provider === 'better-lyrics') return window.churchflowDesktop.getBetterLyrics(summary);
+  return window.churchflowDesktop.getGospelHymn(summary.number);
+}
+
+function matchingLyricsAlternatives(summary) {
+  const title = normalize(summary.title);
+  const artist = normalize(summary.artist || '');
+  return onlineResults
+    .filter((candidate) => candidate !== summary && candidate.provider !== summary.provider)
+    .filter((candidate) => normalize(candidate.title) === title)
+    .filter((candidate) => {
+      if (!artist || !normalize(candidate.artist || '')) return false;
+      const otherArtist = normalize(candidate.artist);
+      return artist === otherArtist || artist.includes(otherArtist) || otherArtist.includes(artist);
+    })
+    .sort((a, b) => {
+      const priority = { 'better-lyrics': 0, lrclib: 1, 'lrc-red': 2, local: 3, 'lyrics-ovh': 4 };
+      return (priority[a.provider] ?? 5) - (priority[b.provider] ?? 5);
+    });
+}
+
 async function openOnlineHymn(summary) {
   loadedOnlineHymn = null;
   $('#onlineHymnTitle').textContent = summary.title;
-  const providerLabel = summary.source || (summary.provider === 'lrclib' ? 'LRCLIB' : summary.provider === 'lrc-red' ? 'lrc.red' : summary.provider === 'lyrics-ovh' ? 'Lyrics.ovh' : summary.provider === 'better-lyrics' ? 'Better Lyrics' : summary.provider === 'local' ? 'OpenLyrics / Local library' : 'Gospel Hymns & Songs');
+  let providerLabel = summary.source || (summary.provider === 'lrclib' ? 'LRCLIB' : summary.provider === 'lrc-red' ? 'lrc.red' : summary.provider === 'lyrics-ovh' ? 'Lyrics.ovh' : summary.provider === 'better-lyrics' ? 'Better Lyrics' : summary.provider === 'local' ? 'OpenLyrics / Local library' : 'Gospel Hymns & Songs');
   $('#onlineHymnMeta').textContent = summary.provider === 'gospel-hymns'
     ? `Hymn ${summary.number} · ${summary.category} · ${providerLabel}`
     : `${summary.artist || 'Unknown artist'} · ${providerLabel}`;
   const sourceLink = $('#onlineSourceLink');
-  sourceLink.href = summary.sourceUrl || (summary.provider === 'lrc-red' ? 'https://lrc.red/' : summary.provider === 'lrclib' ? 'https://lrclib.net/' : summary.provider === 'lyrics-ovh' ? 'https://lyrics.ovh/' : summary.provider === 'better-lyrics' ? 'https://betterlyrics.org/' : summary.provider === 'local' ? 'https://docs.openlyrics.org/' : 'https://gospel-hymns.onrender.com/');
+  const sourceUrls = { 'lrc-red': 'https://lrc.red/', lrclib: 'https://lrclib.net/', 'lyrics-ovh': 'https://lyrics.ovh/', 'better-lyrics': 'https://betterlyrics.org/', local: 'https://docs.openlyrics.org/', 'gospel-hymns': 'https://gospel-hymns.onrender.com/' };
+  sourceLink.href = summary.sourceUrl || sourceUrls[summary.provider] || sourceUrls['gospel-hymns'];
   sourceLink.textContent = `Lyrics source: ${providerLabel}`;
   $('#onlineHymnLyrics').textContent = 'Loading lyrics…';
   $('#importOnlineHymn').disabled = true;
@@ -423,30 +501,46 @@ async function openOnlineHymn(summary) {
     ? 'This song is already saved in your local library.'
     : 'Before adding lyrics to your local library, confirm that your church has permission to project or store them, or that the song is in the public domain. API access does not grant lyric rights.';
   $('#onlineHymnDialog').showModal();
-  try {
-    const hymn = summary.provider === 'local'
-      ? { ...summary, body: summary.body }
-      : summary.provider === 'lrclib'
-        ? await window.churchflowDesktop.getLrclibLyrics(summary.id)
-        : summary.provider === 'lrc-red'
-          ? await window.churchflowDesktop.getLrcRedLyrics(summary.isrc || summary.id)
-          : summary.provider === 'lyrics-ovh'
-            ? await window.churchflowDesktop.getLyricsOvhLyrics(summary.artist, summary.title)
-            : summary.provider === 'better-lyrics'
-              ? await window.churchflowDesktop.getBetterLyrics(summary)
-              : await window.churchflowDesktop.getGospelHymn(summary.number);
-    loadedOnlineHymn = { ...summary, ...hymn, title: summary.title || hymn.title, artist: summary.artist || '', sourceUrl: summary.sourceUrl || hymn.sourceUrl };
-    $('#onlineHymnTitle').textContent = loadedOnlineHymn.title;
-    $('#onlineHymnMeta').textContent = summary.provider === 'gospel-hymns'
-      ? `Hymn ${hymn.number} · ${hymn.category} · Gospel Hymns & Songs`
-      : `${summary.artist || hymn.artist || 'Unknown artist'} · ${providerLabel}`;
-    $('#onlineHymnLyrics').textContent = hymn.body || 'No lyric text was returned for this song.';
-    $('#importOnlineHymn').disabled = !hymn.body;
-  } catch (error) {
-    $('#onlineHymnLyrics').textContent = error.message || 'Could not load these lyrics.';
-  }
-}
 
+  let hymn = null;
+  let activeSummary = summary;
+  const alternatives = matchingLyricsAlternatives(summary);
+  const attempts = [summary, ...alternatives];
+  for (const candidate of attempts) {
+    try {
+      hymn = await fetchOnlineLyrics(candidate);
+      if (hymn?.body) {
+        activeSummary = candidate;
+        break;
+      }
+      hymn = null;
+    } catch (error) {
+      console.info(`Lyrics unavailable from ${candidate.source || candidate.provider}; trying another matching source.`, error?.message || error);
+    }
+  }
+
+  if (!hymn?.body) {
+    $('#onlineHymnLyrics').textContent = `Lyrics are not available from ${providerLabel} or the other matching sources right now. Try another result, or add the song's lyrics manually to your library.`;
+    return;
+  }
+
+  providerLabel = activeSummary.source || providerLabel;
+  sourceLink.href = activeSummary.sourceUrl || sourceUrls[activeSummary.provider] || sourceLink.href;
+  sourceLink.textContent = `Lyrics source: ${providerLabel}`;
+  loadedOnlineHymn = {
+    ...summary, ...hymn,
+    title: summary.title || hymn.title,
+    artist: summary.artist || hymn.artist || '',
+    source: hymn.source || providerLabel,
+    sourceUrl: activeSummary.sourceUrl || hymn.sourceUrl || summary.sourceUrl
+  };
+  $('#onlineHymnTitle').textContent = loadedOnlineHymn.title;
+  $('#onlineHymnMeta').textContent = summary.provider === 'gospel-hymns'
+    ? `Hymn ${hymn.number} · ${hymn.category} · ${providerLabel}`
+    : `${summary.artist || hymn.artist || 'Unknown artist'} · ${providerLabel}`;
+  $('#onlineHymnLyrics').textContent = hymn.body;
+  $('#importOnlineHymn').disabled = false;
+}
 async function searchOnline() {
   const query = $('#search').value.trim();
   const requestId = ++onlineSearchRequest;
