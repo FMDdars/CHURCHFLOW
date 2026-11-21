@@ -55,7 +55,7 @@ jobs:
           git tag "v0.9.${{ github.run_number }}"
           git push origin "v0.9.${{ github.run_number }}"
 
-      - name: Create one GitHub release before uploading assets
+      - name: Create GitHub release
         shell: bash
         run: |
           gh release create "v0.9.${{ github.run_number }}" \
@@ -65,10 +65,50 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and publish Windows installer and portable app
-        run: npm run dist:win:publish
+      # Build locally first. Uploading with gh explicitly ensures latest.yml is
+      # attached to the exact release that the GitHub updater checks.
+      - name: Build Windows installer and portable app
+        run: npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify updater metadata and both Windows packages
+        shell: pwsh
+        run: |
+          $required = @(
+            "dist/latest.yml",
+            "dist/ChurchFlow-Setup-0.9.${{ github.run_number }}-x64.exe",
+            "dist/ChurchFlow-Portable-0.9.${{ github.run_number }}-x64.exe"
+          )
+          foreach ($file in $required) {
+            if (-not (Test-Path $file)) { throw "Required release file was not generated: $file" }
+          }
+          $metadata = Get-Content "dist/latest.yml" -Raw
+          if ($metadata -notmatch "(?m)^path: ChurchFlow-Setup-") {
+            throw "latest.yml does not point to the ChurchFlow installer."
+          }
+          if ($metadata -notmatch "(?m)^sha512: ") {
+            throw "latest.yml is missing the installer SHA-512 checksum."
+          }
+
+      - name: Upload installer, portable build and updater metadata to GitHub Release
+        shell: pwsh
+        run: |
+          $assets = Get-ChildItem "dist" -File | Where-Object {
+            $_.Name -match "^(ChurchFlow-(Setup|Portable)-.*\.exe(\.blockmap)?|latest\.yml)$"
+          }
+          if (-not ($assets.Name -contains "latest.yml")) {
+            throw "latest.yml is not present in the release upload set."
+          }
+          gh release upload "v0.9.${{ github.run_number }}" --clobber -- $assets.FullName
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify published release contains updater metadata
+        shell: bash
+        run: |
+          gh release view "v0.9.${{ github.run_number }}" --json assets --jq '.assets[].name' | grep -Fx "latest.yml"
+          gh release view "v0.9.${{ github.run_number }}" --json assets --jq '.assets[].name' | grep -E '^ChurchFlow-Setup-.*\.exe$'
 
       - name: Keep a copy of Windows build files in Actions
         uses: actions/upload-artifact@v4
