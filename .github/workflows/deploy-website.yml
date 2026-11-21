@@ -30,6 +30,12 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
+      - name: Copy official ChurchFlow logo into website
+        run: |
+          mkdir -p website/assets
+          cp assets/churchflow.png website/assets/churchflow.png
+          cp assets/churchflow.ico website/assets/churchflow.ico
+
       - name: Upload website files
         uses: actions/upload-pages-artifact@v3
         with:
