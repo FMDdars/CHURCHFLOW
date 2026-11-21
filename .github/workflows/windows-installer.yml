@@ -72,23 +72,42 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify updater metadata and both Windows packages
+      - name: Generate updater metadata and verify both Windows packages
         shell: pwsh
         run: |
-          $required = @(
-            "dist/latest.yml",
-            "dist/ChurchFlow-Setup-0.9.${{ github.run_number }}-x64.exe",
-            "dist/ChurchFlow-Portable-0.9.${{ github.run_number }}-x64.exe"
-          )
-          foreach ($file in $required) {
-            if (-not (Test-Path $file)) { throw "Required release file was not generated: $file" }
+          $setup = Get-Item "dist/ChurchFlow-Setup-0.9.${{ github.run_number }}-x64.exe"
+          $portable = Get-Item "dist/ChurchFlow-Portable-0.9.${{ github.run_number }}-x64.exe"
+          if (-not $setup -or -not $portable) {
+            throw "Both the ChurchFlow installer and portable package must be built."
           }
-          $metadata = Get-Content "dist/latest.yml" -Raw
-          if ($metadata -notmatch "(?m)^path: ChurchFlow-Setup-") {
-            throw "latest.yml does not point to the ChurchFlow installer."
+
+          # Generate electron-updater's latest.yml from the exact installer
+          # that will be uploaded to this release. This avoids missing or
+          # stale metadata in GitHub Releases.
+          $sha = [System.Security.Cryptography.SHA512]::Create()
+          try {
+            $stream = [System.IO.File]::OpenRead($setup.FullName)
+            try { $hash = [Convert]::ToBase64String($sha.ComputeHash($stream)) }
+            finally { $stream.Dispose() }
           }
-          if ($metadata -notmatch "(?m)^sha512: ") {
-            throw "latest.yml is missing the installer SHA-512 checksum."
+          finally { $sha.Dispose() }
+
+          $releaseDate = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+          $metadata = @(
+            "version: 0.9.${{ github.run_number }}"
+            "files:"
+            "  - url: $($setup.Name)"
+            "    sha512: $hash"
+            "    size: $($setup.Length)"
+            "path: $($setup.Name)"
+            "sha512: $hash"
+            "releaseDate: '$releaseDate'"
+          ) -join "`n"
+          [System.IO.File]::WriteAllText("dist/latest.yml", $metadata + "`n", [System.Text.UTF8Encoding]::new($false))
+
+          $check = Get-Content "dist/latest.yml" -Raw
+          if ($check -notmatch "(?m)^path: ChurchFlow-Setup-" -or $check -notmatch "(?m)^sha512: [A-Za-z0-9+/]+=*") {
+            throw "Generated latest.yml is invalid."
           }
 
       - name: Upload installer, portable build and updater metadata to GitHub Release
