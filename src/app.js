@@ -444,7 +444,7 @@ async function openOnlineHymn(summary) {
       // result for the same title (and, when known, the same artist).
       if (summary.provider === 'lrclib' || summary.provider === 'lrc-red' || summary.provider === 'lyrics-ovh') {
         const titleKey = normalize(summary.title);
-        const artistKey = normalize(summary.artist || '');
+        const artistKey = normalize(summary.artist || '') === normalize('Unknown artist') ? '' : normalize(summary.artist || '');
         const alternatives = onlineResults.filter((item) => {
           if (!item || item === summary || item.provider === summary.provider || !item.title || !item.provider) return false;
           if (normalize(item.title) !== titleKey) return false;
