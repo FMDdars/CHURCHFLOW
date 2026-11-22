@@ -8,6 +8,7 @@ const starter = [
 
 let data = load();
 let tab = 'songs';
+let searchOpen = false;
 let selected = null;
 let slideIndex = 0;
 let liveIndex = 0;
@@ -108,6 +109,7 @@ function renderLibrary() {
   const query = $('#search').value;
   const library = $('#libraryList');
   library.innerHTML = '';
+  library.hidden = !searchOpen;
   const online = tab === 'online';
   $('#onlineStatus').hidden = !online;
   $('#onlineSearchButton').hidden = true;
@@ -131,7 +133,7 @@ function renderLibrary() {
       if (item.type === 'presentation') meta.textContent = `POWERPOINT / PDF · ${item.slideCount || '…'} slides`;
       else meta.textContent = `${item.type === 'song' ? 'SONG' : 'ANNOUNCEMENT'} · ${slides(item).length} slides`;
       element.append(title, meta);
-      element.onclick = () => { selected = item.id; slideIndex = 0; render(); };
+      element.onclick = () => { searchOpen = false; selected = item.id; slideIndex = 0; render(); };
       library.append(element);
     });
   if (!library.children.length && tab === 'presentations') {
@@ -161,7 +163,7 @@ function renderOnlineResults() {
     const title = document.createElement('div'); title.className = 'item-title'; title.textContent = result.title;
     const meta = document.createElement('div'); meta.className = 'item-sub';
     meta.textContent = result.provider === 'gospel-hymns' ? `HYMN ${result.number} · ${result.category} · Gospel Hymns & Songs` : `${result.artist || 'Unknown artist'} · ${result.source || result.provider}`;
-    element.append(title, meta); element.onclick = () => openOnlineHymn(result); library.append(element);
+    element.append(title, meta); element.onclick = () => { searchOpen = false; library.hidden = true; openOnlineHymn(result); }; library.append(element);
   });
 }
 
@@ -683,6 +685,27 @@ async function stopNdi() {
   $('#ndiStatus').textContent = 'NDI output stopped. Clean capture window remains available.';
 }
 
+$('#search').addEventListener('focus', () => {
+  searchOpen = true;
+  renderLibrary();
+});
+$('#search').addEventListener('click', () => {
+  searchOpen = true;
+  renderLibrary();
+});
+$('#search').addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    searchOpen = false;
+    $('#libraryList').hidden = true;
+    $('#search').blur();
+  }
+});
+document.addEventListener('pointerdown', (event) => {
+  if (!event.target.closest('.search-row') && !event.target.closest('#libraryList')) {
+    searchOpen = false;
+    $('#libraryList').hidden = true;
+  }
+});
 $('#search').addEventListener('input', () => {
   clearTimeout(onlineSearchTimer);
   const query = $('#search').value.trim();
@@ -730,6 +753,8 @@ $('#importOpenLyrics').onclick = importOpenLyrics;
 
 document.querySelectorAll('.tab').forEach((button) => {
   button.onclick = () => {
+    searchOpen = false;
+    $('#libraryList').hidden = true;
     tab = button.dataset.tab;
     document.querySelectorAll('.tab').forEach((other) => other.classList.toggle('active', other === button));
     renderLibrary();

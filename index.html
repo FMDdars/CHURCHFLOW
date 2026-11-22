@@ -24,12 +24,14 @@
       <div class="tabs"><button class="tab active" data-tab="songs">Songs</button><button class="tab" data-tab="slides">Slides</button><button class="tab" data-tab="presentations">PowerPoint</button><button class="tab" data-tab="online">Online lyrics</button></div>
       <div class="search-row"><input id="search" class="search" placeholder="Search songs and slides…" /><button id="onlineSearchButton" class="btn btn-primary" hidden>Search</button></div><div id="onlineProviderTools" class="provider-tools" hidden><span class="muted">Searching all connected lyrics sources automatically</span><button id="importOpenLyrics" class="btn btn-subtle" type="button">＋ Import OpenLyrics XML / ZIP</button></div>
       <p id="onlineStatus" class="online-status" hidden>Search an online hymn catalogue. Internet access is required.</p>
-      <div id="libraryList" class="library-list"></div>
+      <div id="libraryList" class="library-list search-history-popover" hidden></div>
+      <section class="service-order-panel">
+        <div class="service-order-heading"><div><h2>Service order</h2><p class="muted">Arrange what happens during the service</p></div><button id="newService" class="btn btn-subtle">New service</button></div>
+        <div id="serviceList" class="service-list"></div>
+      </section>
       <div id="libraryFooter" class="library-footer"><button id="editSelectedSong" class="btn btn-subtle full" hidden>✎ Edit selected song</button><button id="addSlide" class="btn btn-subtle full">＋ New announcement slide</button><button id="importPowerPointLibrary" class="btn btn-subtle full">＋ Import PowerPoint / PDF</button></div>
     </aside>
     <section class="center panel">
-      <div class="panel-heading"><div><h2>Service order</h2><p class="muted">Arrange what happens during the service</p></div><button id="newService" class="btn btn-subtle">New service</button></div>
-      <div id="serviceList" class="service-list"></div>
       <div class="center-bottom">
         <div class="preview-heading"><div><h3>Slide preview</h3><span id="slideCounter" class="muted">Slide 1 of 1</span></div><div class="preview-nav"><button id="presenterViewButton" class="btn btn-subtle" hidden>Presenter view</button><button id="prevSlide" class="icon-btn">←</button><button id="nextSlide" class="icon-btn">→</button></div></div>
         <div id="preview" class="slide-preview"><div class="preview-content"><span class="eyebrow">CHURCHFLOW PREVIEW</span><h1>Select an item</h1><p>Choose a song or slide from your library.</p></div></div>
