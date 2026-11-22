@@ -434,11 +434,11 @@ async function openOnlineHymn(summary) {
   $('#onlineHymnTitle').textContent = summary.title;
   const initialInfo = lyricsProviderInfo(summary);
   $('#onlineHymnMeta').textContent = summary.provider === 'gospel-hymns'
-    ? \`Hymn \${summary.number} · \${summary.category} · \${initialInfo.label}\`
-    : \`\${summary.artist || 'Unknown artist'} · \${initialInfo.label}\`;
+    ? `Hymn ${summary.number} · ${summary.category} · ${initialInfo.label}`
+    : `${summary.artist || 'Unknown artist'} · ${initialInfo.label}`;
   const sourceLink = $('#onlineSourceLink');
   sourceLink.href = summary.sourceUrl || initialInfo.url;
-  sourceLink.textContent = \`Lyrics source: \${initialInfo.label}\`;
+  sourceLink.textContent = `Lyrics source: ${initialInfo.label}`;
   $('#onlineHymnLyrics').textContent = 'Loading lyrics…';
   $('#importOnlineHymn').disabled = true;
   $('#onlineRightsNote').textContent = summary.provider === 'local'
@@ -463,13 +463,13 @@ async function openOnlineHymn(summary) {
   const errors = [];
 
   for (const candidate of [summary, ...alternatives]) {
-    const key = \`\${candidate.provider}:\${candidate.id || candidate.number || candidate.title}\`;
+    const key = `${candidate.provider}:${candidate.id || candidate.number || candidate.title}`;
     if (attempted.has(key)) continue;
     attempted.add(key);
     try {
       const hymn = await fetchOnlineHymnCandidate(candidate);
       if (!hymn || typeof hymn.body !== 'string' || !hymn.body.trim()) {
-        errors.push(\`\${lyricsProviderInfo(candidate).label}: no lyric text\`);
+        errors.push(`${lyricsProviderInfo(candidate).label}: no lyric text`);
         continue;
       }
       const actualInfo = lyricsProviderInfo(candidate);
@@ -483,18 +483,18 @@ async function openOnlineHymn(summary) {
       };
       $('#onlineHymnTitle').textContent = loadedOnlineHymn.title;
       $('#onlineHymnMeta').textContent = candidate.provider === 'gospel-hymns'
-        ? \`Hymn \${hymn.number || candidate.number} · \${hymn.category || candidate.category} · \${actualInfo.label}\`
-        : \`\${loadedOnlineHymn.artist || 'Unknown artist'} · \${actualInfo.label}\`;
+        ? `Hymn ${hymn.number || candidate.number} · ${hymn.category || candidate.category} · ${actualInfo.label}`
+        : `${loadedOnlineHymn.artist || 'Unknown artist'} · ${actualInfo.label}`;
       sourceLink.href = loadedOnlineHymn.sourceUrl;
-      sourceLink.textContent = \`Lyrics source: \${actualInfo.label}\`;
+      sourceLink.textContent = `Lyrics source: ${actualInfo.label}`;
       $('#onlineHymnLyrics').textContent = hymn.body.trim();
       $('#importOnlineHymn').disabled = false;
       if (candidate !== summary) {
-        $('#onlineStatus').textContent = \`\${summary.title}: lyrics were unavailable from \${initialInfo.label}; ChurchFlow found a matching record from \${actualInfo.label} instead.\`;
+        $('#onlineStatus').textContent = `${summary.title}: lyrics were unavailable from ${initialInfo.label}; ChurchFlow found a matching record from ${actualInfo.label} instead.`;
       }
       return;
     } catch (error) {
-      errors.push(\`\${lyricsProviderInfo(candidate).label}: \${error.message || 'lookup failed'}\`);
+      errors.push(`${lyricsProviderInfo(candidate).label}: ${error.message || 'lookup failed'}`);
     }
   }
 
@@ -502,7 +502,7 @@ async function openOnlineHymn(summary) {
     ? 'Lyrics were not available from the matching catalogue records. Try another search term or import the song from an OpenLyrics collection.'
     : 'This search result contains song information, but no lyrics were returned. Try searching by the full song title and artist, or import the song from an OpenLyrics collection.';
   $('#onlineRightsNote').textContent = 'ChurchFlow checked the matching records returned by its available lyrics catalogues. A search result does not guarantee that lyrics are available.';
-  $('#onlineStatus').textContent = \`No lyrics found for “\${summary.title}”. \${errors.slice(0, 4).join(' · ')}\`;
+  $('#onlineStatus').textContent = `No lyrics found for “${summary.title}”. ${errors.slice(0, 4).join(' · ')}`;
 }
 async function searchOnline() {
   const query = $('#search').value.trim();
