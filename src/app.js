@@ -248,12 +248,41 @@ function paint(element, item, index, blank = false) {
   wrap.append(heading, paragraph); element.append(wrap);
 }
 
+function paintSongOverview(element, item) {
+  element.innerHTML = '';
+  const pages = slides(item);
+  const grid = document.createElement('div');
+  grid.className = 'song-slide-overview';
+  pages.forEach((content, index) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = `song-slide-card${index === slideIndex ? ' selected' : ''}`;
+    card.setAttribute('aria-label', `Select slide ${index + 1}`);
+    const number = document.createElement('span');
+    number.className = 'song-slide-number';
+    number.textContent = `SLIDE ${index + 1}`;
+    const title = document.createElement('strong');
+    title.textContent = item.title || 'Song';
+    const lyrics = document.createElement('span');
+    lyrics.className = 'song-slide-lyrics';
+    lyrics.textContent = content || '(Empty slide)';
+    card.append(number, title, lyrics);
+    card.addEventListener('click', () => {
+      slideIndex = index;
+      render();
+    });
+    grid.append(card);
+  });
+  element.append(grid);
+}
+
 function render() {
   renderLibrary(); renderService();
   const item = current(); const count = item ? slides(item).length : 0;
   $('#slideCounter').textContent = `Slide ${item ? slideIndex + 1 : 0} of ${count}`;
   $('#presenterViewButton').hidden = item?.type !== 'presentation' && liveItem?.type !== 'presentation';
-  paint($('#preview'), item, slideIndex);
+  if (item?.type === 'song') paintSongOverview($('#preview'), item);
+  else paint($('#preview'), item, slideIndex);
   paint($('#livePreview'), liveItem, liveIndex, liveBlank);
   if ($('#presenterDialog').open) updatePresenterView().catch(console.error);
 }
