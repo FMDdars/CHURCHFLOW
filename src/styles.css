@@ -71,3 +71,14 @@
 .splash-loader{width:26px;height:26px;border:2px solid #43516c;border-top-color:#91a5ff;border-radius:50%;animation:churchflow-spin .85s linear infinite}
 @keyframes churchflow-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.splash-screen{transition:none}.splash-loader{animation:none}}
+
+
+/* Song preview overview: show every generated lyric slide at once */
+.slide-preview:has(.song-slide-overview){display:block;text-align:left;padding:10px;overflow:auto}
+.song-slide-overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;align-content:start}
+.song-slide-card{min-width:0;min-height:112px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:10px;border:1px solid #344158;border-radius:9px;background:linear-gradient(145deg,#202e49,#101827);color:#e9edf6;text-align:left;cursor:pointer}
+.song-slide-card:hover{border-color:#718ce8;background:#263653}
+.song-slide-card.selected{border-color:#91a5ff;box-shadow:inset 0 0 0 1px #91a5ff;background:linear-gradient(145deg,#2b3e65,#17243a)}
+.song-slide-number{font-size:9px;letter-spacing:1px;color:#9fb2ff}
+.song-slide-card strong{font-size:10px;line-height:1.3}
+.song-slide-lyrics{font-size:10px;line-height:1.45;color:#d5deef;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
