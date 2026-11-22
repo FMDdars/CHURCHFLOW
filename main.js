@@ -44,7 +44,7 @@ function createWindow() {
     title: APP_TITLE,
     autoHideMenuBar: true,
     backgroundColor: '#0b101a',
-    icon: path.join(__dirname, 'assets', 'churchflow.ico'),
+    icon: path.join(__dirname, 'assets', 'churchflow-logo-chevrons.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

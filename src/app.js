@@ -267,9 +267,15 @@ function paintSongOverview(element, item) {
     lyrics.className = 'song-slide-lyrics';
     lyrics.textContent = content || '(Empty slide)';
     card.append(number, title, lyrics);
-    card.addEventListener('click', () => {
+    card.addEventListener('click', async () => {
+      // Selecting a lyric preview selects and sends that exact slide to the
+      // live preview and every connected audience display.
       slideIndex = index;
+      liveItem = JSON.parse(JSON.stringify(item));
+      liveIndex = index;
+      liveBlank = false;
       render();
+      await sendDisplays();
     });
     grid.append(card);
   });
