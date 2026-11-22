@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  workflows: write
 
 # Serialize releases so concurrent runs cannot publish an older version last.
 concurrency:
@@ -53,8 +52,11 @@ jobs:
       - name: Create release tag for the updater
         shell: bash
         run: |
-          git tag "v0.9.${{ github.run_number }}"
-          git push origin "v0.9.${{ github.run_number }}"
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f "ref=refs/tags/v0.9.${{ github.run_number }}" \
+            -f "sha=${GITHUB_SHA}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub release
         shell: bash
