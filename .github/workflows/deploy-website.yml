@@ -36,7 +36,8 @@ jobs:
       - name: Copy official ChurchFlow logo into website
         run: |
           mkdir -p website/assets
-          cp assets/churchflow.png website/assets/churchflow.png
+          cp assets/churchflow-logo-chevrons.png website/assets/churchflow-logo-chevrons.png
+          cp assets/churchflow-logo-chevrons.png website/assets/churchflow.png
           cp assets/churchflow.ico website/assets/churchflow.ico
 
       - name: Upload website files
