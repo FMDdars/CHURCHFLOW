@@ -132,8 +132,8 @@ jobs:
         run: |
           set -euo pipefail
           assets="$(gh release view "v0.9.${{ github.run_number }}" --json assets --jq '.assets[].name')"
-          printf '%s\\n' "$assets" | grep -Fx "latest.yml"
-          printf '%s\\n' "$assets" | grep -E '^ChurchFlow-Setup-.*\\.exe$'
+          printf '%s\n' "$assets" | grep -Fx "latest.yml"
+          printf '%s\n' "$assets" | grep -E '^ChurchFlow-Setup-.*\.exe$'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
