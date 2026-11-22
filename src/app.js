@@ -1000,26 +1000,40 @@ $('#importOnlineHymn').onclick = () => {
 window.addEventListener('storage', (event) => { if (event.key === 'churchflow-data') { data = load(); render(); } });
 window.addEventListener('beforeunload', () => { if (ndiActive) window.churchflowDesktop?.ndiStop(); });
 
-// Presentation shortcuts; typing in an input does not send slides live.
+// Presentation shortcuts move the workspace preview and audience output together.
+// When different items are selected for preview and live output, each advances independently.
 window.addEventListener('keydown', async (event) => {
   const target = event.target;
   const isTyping = target && (target.matches('input, textarea, select') || target.isContentEditable);
   if (isTyping || $('#editor').open || $('#onlineHymnDialog').open) return;
-  const count = slides(liveItem).length;
+  const previewItem = current();
+  const previewCount = slides(previewItem).length;
+  const liveCount = slides(liveItem).length;
+  const moveBoth = (direction) => {
+    if (previewItem) slideIndex = Math.max(0, Math.min(previewCount - 1, slideIndex + direction));
+    if (liveItem) liveIndex = Math.max(0, Math.min(liveCount - 1, liveIndex + direction));
+    liveBlank = false;
+    render();
+    return sendDisplays();
+  };
   if (event.key === 'ArrowRight' || event.code === 'Space') {
-    event.preventDefault(); liveIndex = Math.min(Math.max(0, count - 1), liveIndex + 1); liveBlank = false; render(); await sendDisplays();
+    event.preventDefault(); await moveBoth(1);
   } else if (event.key === 'ArrowLeft') {
-    liveIndex = Math.max(0, liveIndex - 1); liveBlank = false; render(); await sendDisplays();
+    event.preventDefault(); await moveBoth(-1);
   } else if (event.key.toLowerCase() === 'b') {
     liveBlank = true; render(); await sendDisplays();
   } else if (event.key === 'Home') {
-    liveIndex = 0; liveBlank = false; render(); await sendDisplays();
+    if (previewItem) slideIndex = 0;
+    if (liveItem) liveIndex = 0;
+    liveBlank = false; render(); await sendDisplays();
   } else if (event.key === 'End') {
-    liveIndex = Math.max(0, count - 1); liveBlank = false; render(); await sendDisplays();
+    if (previewItem) slideIndex = Math.max(0, previewCount - 1);
+    if (liveItem) liveIndex = Math.max(0, liveCount - 1);
+    liveBlank = false; render(); await sendDisplays();
   } else if (event.ctrlKey && event.key.toLowerCase() === 's') {
     event.preventDefault(); save();
   } else if (event.key === 'F5') {
-    event.preventDefault(); if (current()) { liveItem = JSON.parse(JSON.stringify(current())); liveIndex = slideIndex; liveBlank = false; render(); await sendDisplays(); }
+    event.preventDefault(); if (previewItem) { liveItem = JSON.parse(JSON.stringify(previewItem)); liveIndex = slideIndex; liveBlank = false; render(); await sendDisplays(); }
   }
 });
 
