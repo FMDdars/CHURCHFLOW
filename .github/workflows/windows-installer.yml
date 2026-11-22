@@ -59,6 +59,7 @@ jobs:
         shell: bash
         run: |
           gh release create "v0.9.${{ github.run_number }}" \
+            --draft \
             --verify-tag \
             --title "ChurchFlow 0.9.${{ github.run_number }}" \
             --notes "ChurchFlow Windows release with automatic in-app updates. NDI output uses dynamic loading and requires the official NDI Runtime 6 to be installed separately; the runtime is not bundled."
