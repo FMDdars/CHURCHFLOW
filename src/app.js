@@ -407,84 +407,103 @@ function addItem(type) {
   $('#editor').dataset.type = type; $('#editor').showModal();
 }
 
+function lyricsProviderInfo(summary) {
+  const providers = {
+    local: { label: summary.source || 'OpenLyrics / Local library', url: 'https://docs.openlyrics.org/' },
+    lrclib: { label: 'LRCLIB', url: 'https://lrclib.net/' },
+    'lrc-red': { label: 'lrc.red', url: 'https://lrc.red/' },
+    'lyrics-ovh': { label: 'Lyrics.ovh', url: 'https://lyrics.ovh/' },
+    'better-lyrics': { label: 'Better Lyrics', url: 'https://betterlyrics.org/' },
+    'gospel-hymns': { label: 'Gospel Hymns & Songs', url: 'https://gospel-hymns.onrender.com/' }
+  };
+  return providers[summary.provider] || { label: summary.source || summary.provider || 'Lyrics source', url: summary.sourceUrl || 'https://github.com/FMDdars/CHURCHFLOW' };
+}
+
+async function fetchOnlineHymnCandidate(candidate) {
+  if (candidate.provider === 'local') return { ...candidate, body: candidate.body || '' };
+  if (candidate.provider === 'lrclib') return window.churchflowDesktop.getLrclibLyrics(candidate.id);
+  if (candidate.provider === 'lrc-red') return window.churchflowDesktop.getLrcRedLyrics(candidate.isrc || candidate.id);
+  if (candidate.provider === 'lyrics-ovh') return window.churchflowDesktop.getLyricsOvhLyrics(candidate.artist, candidate.title);
+  if (candidate.provider === 'better-lyrics') return window.churchflowDesktop.getBetterLyrics(candidate);
+  if (candidate.provider === 'gospel-hymns') return window.churchflowDesktop.getGospelHymn(candidate.number);
+  throw new Error('This lyrics provider is not supported.');
+}
+
 async function openOnlineHymn(summary) {
   loadedOnlineHymn = null;
   $('#onlineHymnTitle').textContent = summary.title;
-  const providerLabel = summary.source || (summary.provider === 'lrclib' ? 'LRCLIB' : summary.provider === 'lrc-red' ? 'lrc.red' : summary.provider === 'lyrics-ovh' ? 'Lyrics.ovh' : summary.provider === 'better-lyrics' ? 'Better Lyrics' : summary.provider === 'local' ? 'OpenLyrics / Local library' : 'Gospel Hymns & Songs');
+  const initialInfo = lyricsProviderInfo(summary);
   $('#onlineHymnMeta').textContent = summary.provider === 'gospel-hymns'
-    ? `Hymn ${summary.number} · ${summary.category} · ${providerLabel}`
-    : `${summary.artist || 'Unknown artist'} · ${providerLabel}`;
+    ? \`Hymn \${summary.number} · \${summary.category} · \${initialInfo.label}\`
+    : \`\${summary.artist || 'Unknown artist'} · \${initialInfo.label}\`;
   const sourceLink = $('#onlineSourceLink');
-  sourceLink.href = summary.sourceUrl || (summary.provider === 'lrc-red' ? 'https://lrc.red/' : summary.provider === 'lrclib' ? 'https://lrclib.net/' : summary.provider === 'lyrics-ovh' ? 'https://lyrics.ovh/' : summary.provider === 'better-lyrics' ? 'https://betterlyrics.org/' : summary.provider === 'local' ? 'https://docs.openlyrics.org/' : 'https://gospel-hymns.onrender.com/');
-  sourceLink.textContent = `Lyrics source: ${providerLabel}`;
+  sourceLink.href = summary.sourceUrl || initialInfo.url;
+  sourceLink.textContent = \`Lyrics source: \${initialInfo.label}\`;
   $('#onlineHymnLyrics').textContent = 'Loading lyrics…';
   $('#importOnlineHymn').disabled = true;
   $('#onlineRightsNote').textContent = summary.provider === 'local'
     ? 'This song is already saved in your local library.'
     : 'Before adding lyrics to your local library, confirm that your church has permission to project or store them, or that the song is in the public domain. API access does not grant lyric rights.';
   $('#onlineHymnDialog').showModal();
-  try {
-    const loadProviderLyrics = async (item) => {
-      if (item.provider === 'local') return { ...item, body: item.body };
-      if (item.provider === 'lrclib') return window.churchflowDesktop.getLrclibLyrics(item.id);
-      if (item.provider === 'lrc-red') return window.churchflowDesktop.getLrcRedLyrics(item.isrc || item.id);
-      if (item.provider === 'lyrics-ovh') return window.churchflowDesktop.getLyricsOvhLyrics(item.artist, item.title);
-      if (item.provider === 'better-lyrics') return window.churchflowDesktop.getBetterLyrics(item);
-      if (item.provider === 'gospel-hymns') return window.churchflowDesktop.getGospelHymn(item.number);
-      throw new Error('This lyrics source is not supported.');
-    };
-    let selected = summary;
-    let hymn;
-    let loadError;
-    try {
-      hymn = await loadProviderLyrics(selected);
-    } catch (error) {
-      loadError = error;
-      // LRCLIB search can return metadata-only records. Try another provider's
-      // result for the same title (and, when known, the same artist).
-      if (summary.provider === 'lrclib' || summary.provider === 'lrc-red' || summary.provider === 'lyrics-ovh') {
-        const titleKey = normalize(summary.title);
-        const artistKey = normalize(summary.artist || '') === normalize('Unknown artist') ? '' : normalize(summary.artist || '');
-        const alternatives = onlineResults.filter((item) => {
-          if (!item || item === summary || item.provider === summary.provider || !item.title || !item.provider) return false;
-          if (normalize(item.title) !== titleKey) return false;
-          const candidateArtist = normalize(item.artist || '');
-          return !artistKey || !candidateArtist || artistKey === candidateArtist;
-        }).sort((a, b) => {
-          const rank = (item) => item.provider === 'better-lyrics' ? 0 : item.provider === 'lyrics-ovh' ? 1 : item.provider === 'lrc-red' ? 2 : item.provider === 'lrclib' ? 3 : 4;
-          return rank(a) - rank(b);
-        });
-        for (const candidate of alternatives) {
-          try {
-            const candidateLyrics = await loadProviderLyrics(candidate);
-            if (candidateLyrics?.body?.trim()) {
-              selected = candidate;
-              hymn = candidateLyrics;
-              loadError = null;
-              break;
-            }
-          } catch (fallbackError) {
-            loadError = fallbackError;
-          }
-        }
-      }
-      if (!hymn) throw loadError || error;
-    }
-    const actualProviderLabel = selected.source || (selected.provider === 'lrclib' ? 'LRCLIB' : selected.provider === 'lrc-red' ? 'lrc.red' : selected.provider === 'lyrics-ovh' ? 'Lyrics.ovh' : selected.provider === 'better-lyrics' ? 'Better Lyrics' : selected.provider === 'gospel-hymns' ? 'Gospel Hymns & Songs' : providerLabel);
-    loadedOnlineHymn = { ...selected, ...hymn, title: selected.title || hymn.title, artist: selected.artist || hymn.artist || '', sourceUrl: selected.sourceUrl || hymn.sourceUrl };
-    sourceLink.href = loadedOnlineHymn.sourceUrl || sourceLink.href;
-    sourceLink.textContent = `Lyrics source: ${actualProviderLabel}`;
-    $('#onlineHymnTitle').textContent = loadedOnlineHymn.title;
-    $('#onlineHymnMeta').textContent = selected.provider === 'gospel-hymns'
-      ? `Hymn ${hymn.number} · ${hymn.category} · Gospel Hymns & Songs`
-      : `${loadedOnlineHymn.artist || 'Unknown artist'} · ${actualProviderLabel}`;
-    $('#onlineHymnLyrics').textContent = hymn.body || 'No lyric text was returned for this song.';
-    $('#importOnlineHymn').disabled = !hymn.body;
-  } catch (error) {
-    $('#onlineHymnLyrics').textContent = error.message || 'Could not load these lyrics.';
-  }
-}
 
+  // A catalogue search hit is metadata, not proof that lyric text exists.
+  // Try the selected record, then exact-title matches from other providers.
+  const targetTitle = normalize(summary.title);
+  const targetArtist = normalize(summary.artist || '');
+  const alternatives = onlineResults
+    .filter((candidate) => candidate !== summary && normalize(candidate.title) === targetTitle)
+    .sort((a, b) => {
+      const aArtist = targetArtist && normalize(a.artist || '') === targetArtist ? 1 : 0;
+      const bArtist = targetArtist && normalize(b.artist || '') === targetArtist ? 1 : 0;
+      const aDifferentProvider = a.provider !== summary.provider ? 1 : 0;
+      const bDifferentProvider = b.provider !== summary.provider ? 1 : 0;
+      return (bArtist - aArtist) || (bDifferentProvider - aDifferentProvider);
+    });
+  const attempted = new Set();
+  const errors = [];
+
+  for (const candidate of [summary, ...alternatives]) {
+    const key = \`\${candidate.provider}:\${candidate.id || candidate.number || candidate.title}\`;
+    if (attempted.has(key)) continue;
+    attempted.add(key);
+    try {
+      const hymn = await fetchOnlineHymnCandidate(candidate);
+      if (!hymn || typeof hymn.body !== 'string' || !hymn.body.trim()) {
+        errors.push(\`\${lyricsProviderInfo(candidate).label}: no lyric text\`);
+        continue;
+      }
+      const actualInfo = lyricsProviderInfo(candidate);
+      loadedOnlineHymn = {
+        ...candidate, ...hymn,
+        title: candidate.title || hymn.title,
+        artist: candidate.artist || hymn.artist || '',
+        source: hymn.source || candidate.source || actualInfo.label,
+        provider: candidate.provider,
+        sourceUrl: candidate.sourceUrl || hymn.sourceUrl || actualInfo.url
+      };
+      $('#onlineHymnTitle').textContent = loadedOnlineHymn.title;
+      $('#onlineHymnMeta').textContent = candidate.provider === 'gospel-hymns'
+        ? \`Hymn \${hymn.number || candidate.number} · \${hymn.category || candidate.category} · \${actualInfo.label}\`
+        : \`\${loadedOnlineHymn.artist || 'Unknown artist'} · \${actualInfo.label}\`;
+      sourceLink.href = loadedOnlineHymn.sourceUrl;
+      sourceLink.textContent = \`Lyrics source: \${actualInfo.label}\`;
+      $('#onlineHymnLyrics').textContent = hymn.body.trim();
+      $('#importOnlineHymn').disabled = false;
+      if (candidate !== summary) {
+        $('#onlineStatus').textContent = \`\${summary.title}: lyrics were unavailable from \${initialInfo.label}; ChurchFlow found a matching record from \${actualInfo.label} instead.\`;
+      }
+      return;
+    } catch (error) {
+      errors.push(\`\${lyricsProviderInfo(candidate).label}: \${error.message || 'lookup failed'}\`);
+    }
+  }
+
+  $('#onlineHymnLyrics').textContent = alternatives.length
+    ? 'Lyrics were not available from the matching catalogue records. Try another search term or import the song from an OpenLyrics collection.'
+    : 'This search result contains song information, but no lyrics were returned. Try searching by the full song title and artist, or import the song from an OpenLyrics collection.';
+  $('#onlineRightsNote').textContent = 'ChurchFlow checked the matching records returned by its available lyrics catalogues. A search result does not guarantee that lyrics are available.';
+  $('#onlineStatus').textContent = \`No lyrics found for “\${summary.title}”. \${errors.slice(0, 4).join(' · ')}\`;
+}
 async function searchOnline() {
   const query = $('#search').value.trim();
   const requestId = ++onlineSearchRequest;
