@@ -127,8 +127,12 @@ jobs:
       - name: Verify draft release contains updater metadata
         shell: bash
         run: |
-          gh release view "v0.9.${{ github.run_number }}" --json assets --jq '.assets[].name' | grep -Fx "latest.yml"
-          gh release view "v0.9.${{ github.run_number }}" --json assets --jq '.assets[].name' | grep -E '^ChurchFlow-Setup-.*\.exe$'
+          set -euo pipefail
+          assets="$(gh release view "v0.9.${{ github.run_number }}" --json assets --jq '.assets[].name')"
+          printf '%s\\n' "$assets" | grep -Fx "latest.yml"
+          printf '%s\\n' "$assets" | grep -E '^ChurchFlow-Setup-.*\\.exe$'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish complete release after all assets are verified
         shell: bash
